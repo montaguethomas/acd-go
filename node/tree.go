@@ -33,24 +33,6 @@ type (
 	}
 )
 
-// RemoveNode removes this node from the server and from the NodeTree.
-func (nt *Tree) RemoveNode(n *Node) error {
-	if err := n.Remove(); err != nil {
-		return err
-	}
-
-	for _, parentID := range n.Parents {
-		parent, err := nt.FindByID(parentID)
-		if err != nil {
-			log.Debugf("parent ID %s not found", parentID)
-			continue
-		}
-		parent.RemoveChild(n)
-	}
-
-	return nil
-}
-
 // NewTree returns the root node (the head of the tree).
 func NewTree(c client, cacheFile string) (*Tree, error) {
 	nt := &Tree{
@@ -70,6 +52,24 @@ func NewTree(c client, cacheFile string) (*Tree, error) {
 // Close finalizes the NodeTree
 func (nt *Tree) Close() error {
 	return nt.saveCache()
+}
+
+// RemoveNode removes this node from the server and from the NodeTree.
+func (nt *Tree) RemoveNode(n *Node) error {
+	if err := n.Remove(); err != nil {
+		return err
+	}
+
+	for _, parentID := range n.Parents {
+		parent, err := nt.FindByID(parentID)
+		if err != nil {
+			log.Debugf("parent ID %s not found", parentID)
+			continue
+		}
+		parent.RemoveChild(n)
+	}
+
+	return nil
 }
 
 // MkdirAll creates a directory named path, along with any necessary parents,
