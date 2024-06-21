@@ -39,12 +39,10 @@ type Client struct {
 	// created.
 	NodeTree *node.Tree
 
-	config      *Config
-	httpClient  *http.Client
-	cacheFile   string
-	metadataURL string
-	contentURL  string
-	endpoints   EndpointResponse
+	config     *Config
+	httpClient *http.Client
+	cacheFile  string
+	endpoints  EndpointResponse
 }
 
 type EndpointResponse struct {
@@ -67,7 +65,10 @@ func New(config *Config) (*Client, error) {
 			Timeout: config.Timeout,
 		},
 	}
-	if err := setEndpoints(c); err != nil {
+	if err := c.setEndpoints(); err != nil {
+		return nil, err
+	}
+	if err := c.FetchNodeTree(); err != nil {
 		return nil, err
 	}
 	return c, nil

@@ -10,15 +10,15 @@ import (
 
 // GetMetadataURL returns the metadata url.
 func (c *Client) GetMetadataURL(path string) string {
-	return c.metadataURL + path
+	return c.endpoints.MetadataURL + path
 }
 
 // GetContentURL returns the content url.
 func (c *Client) GetContentURL(path string) string {
-	return c.contentURL + path
+	return c.endpoints.ContentURL + path
 }
 
-func setEndpoints(c *Client) error {
+func (c *Client) setEndpoints() error {
 	req, err := http.NewRequest("GET", EndpointURL, nil)
 	if err != nil {
 		log.Errorf("%s: %s", constants.ErrCreatingHTTPRequest, err)
@@ -38,8 +38,6 @@ func setEndpoints(c *Client) error {
 	}
 
 	log.Debugf("Endpoint Results: %+v", er)
-	c.contentURL = er.ContentURL
-	c.metadataURL = er.MetadataURL
 	c.endpoints = er
 	return nil
 }

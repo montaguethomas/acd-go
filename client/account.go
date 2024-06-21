@@ -76,7 +76,7 @@ type (
 // GetAccountInfo returns AccountInfo about the current account.
 func (c *Client) GetAccountInfo() (*AccountInfo, error) {
 	var ai AccountInfo
-	req, err := http.NewRequest("GET", c.metadataURL+"/account/info", nil)
+	req, err := http.NewRequest("GET", c.GetMetadataURL("account/info"), nil)
 	if err != nil {
 		log.Errorf("%s: %s", constants.ErrCreatingHTTPRequest, err)
 		return nil, constants.ErrCreatingHTTPRequest
@@ -100,7 +100,7 @@ func (c *Client) GetAccountInfo() (*AccountInfo, error) {
 // GetAccountQuota returns AccountQuota about the current account.
 func (c *Client) GetAccountQuota() (*AccountQuota, error) {
 	var aq AccountQuota
-	req, err := http.NewRequest("GET", c.metadataURL+"/account/quota", nil)
+	req, err := http.NewRequest("GET", c.GetMetadataURL("account/quota"), nil)
 	if err != nil {
 		log.Errorf("%s: %s", constants.ErrCreatingHTTPRequest, err)
 		return nil, constants.ErrCreatingHTTPRequest
@@ -124,7 +124,7 @@ func (c *Client) GetAccountQuota() (*AccountQuota, error) {
 // GetAccountUsage returns AccountUsage about the current account.
 func (c *Client) GetAccountUsage() (*AccountUsage, error) {
 	var au AccountUsage
-	req, err := http.NewRequest("GET", c.metadataURL+"/account/usage", nil)
+	req, err := http.NewRequest("GET", c.GetMetadataURL("account/usage"), nil)
 	if err != nil {
 		log.Errorf("%s: %s", constants.ErrCreatingHTTPRequest, err)
 		return nil, constants.ErrCreatingHTTPRequest
