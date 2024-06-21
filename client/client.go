@@ -69,13 +69,8 @@ func (j *SharedCookieJar) Cookies(u *url.URL) (cookies []*http.Cookie) {
 	return j.cookies
 }
 
-// New returns a new Amazon Cloud Drive "acd" Client. configFile must exist and must be a valid JSON decodable into Config.
-func New(configFile string) (*Client, error) {
-	config, err := loadConfig(configFile)
-	if err != nil {
-		return nil, err
-	}
-
+// New returns a new Amazon Cloud Drive "acd" Client
+func New(config *Config) (*Client, error) {
 	jar := &SharedCookieJar{}
 	cookies := []*http.Cookie{}
 	for name, value := range config.Cookies {
@@ -108,7 +103,7 @@ func (c *Client) Do(r *http.Request) (*http.Response, error) {
 	return c.httpClient.Do(r)
 }
 
-func loadConfig(configFile string) (*Config, error) {
+func LoadConfig(configFile string) (*Config, error) {
 	// validate the config file
 	if err := validateFile(configFile, false); err != nil {
 		return nil, err
