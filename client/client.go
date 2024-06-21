@@ -34,10 +34,10 @@ type Config struct {
 
 // Client provides a client for Amazon Cloud Drive.
 type Client struct {
-	// NodeTree is the tree of nodes as stored on the drive. This tree should
+	// nodeTree is the tree of nodes as stored on the drive. This tree should
 	// be fetched using (*Client).FetchNodeTree() as soon the client is
 	// created.
-	NodeTree *node.Tree
+	nodeTree *node.Tree
 
 	config     *Config
 	httpClient *http.Client
@@ -76,7 +76,7 @@ func New(config *Config) (*Client, error) {
 
 // Close finalizes the acd.
 func (c *Client) Close() error {
-	return c.NodeTree.Close()
+	return c.nodeTree.Close()
 }
 
 // Do invokes net/http.Client.Do(). Refer to net/http.Client.Do() for documentation.

@@ -71,7 +71,7 @@ func testUploadFolder(t *testing.T, localFolder string, recursive, overwrite boo
 	// test the NodeTree is updated
 	for _, file := range files {
 		remoteFile := fmt.Sprintf("%s/%s", remoteFolder, file)
-		node, err := c.NodeTree.FindNode(remoteFile)
+		node, err := c.GetNodeTree().FindNode(remoteFile)
 		if err != nil {
 			t.Errorf("c.NodeTree.FindNode(%s): got error %s", remoteFile, err)
 		}
@@ -94,7 +94,7 @@ func testUploadFolder(t *testing.T, localFolder string, recursive, overwrite boo
 	}
 	for _, file := range files {
 		remoteFile := fmt.Sprintf("%s/%s", remoteFolder, file)
-		node, err := c.NodeTree.FindNode(remoteFile)
+		node, err := c.GetNodeTree().FindNode(remoteFile)
 		if err != nil {
 			t.Errorf("reloaded cache, c.NodeTree.FindNode(%s): got error %s", file, err)
 		}

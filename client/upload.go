@@ -24,13 +24,13 @@ func (c *Client) Upload(filename string, overwrite bool, r io.Reader) error {
 		node     *node.Node
 	)
 
-	node, err = c.NodeTree.MkdirAll(path.Dir(filename))
+	node, err = c.GetNodeTree().MkdirAll(path.Dir(filename))
 	if err != nil {
 		return err
 	}
 	{
 		log.SetLevel(log.DisableLogLevel)
-		fileNode, err = c.NodeTree.FindNode(filename)
+		fileNode, err = c.GetNodeTree().FindNode(filename)
 		log.SetLevel(logLevel)
 	}
 	if err == nil {
@@ -91,7 +91,7 @@ func (c *Client) uploadFolderFunc(localPath, remoteBasePath string, recursive, o
 		}
 
 		log.Infof("uploading %q to %q", fpath, remoteFilename)
-		if remoteNode, err = c.NodeTree.MkdirAll(remotePath); err != nil {
+		if remoteNode, err = c.GetNodeTree().MkdirAll(remotePath); err != nil {
 			return err
 		}
 
@@ -104,7 +104,7 @@ func (c *Client) uploadFolderFunc(localPath, remoteBasePath string, recursive, o
 		// does the file already exist?
 		{
 			log.SetLevel(log.DisableLogLevel)
-			fileNode, err = c.NodeTree.FindNode(remoteFilename)
+			fileNode, err = c.GetNodeTree().FindNode(remoteFilename)
 			log.SetLevel(logLevel)
 		}
 		if err == nil {

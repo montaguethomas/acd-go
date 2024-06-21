@@ -125,7 +125,7 @@ func removeTestFolder() error {
 	if err := c.FetchNodeTree(); err != nil {
 		return err
 	}
-	node, err := c.NodeTree.FindNode(testFolderPath)
+	node, err := c.GetNodeTree().FindNode(testFolderPath)
 	if err != nil && err != constants.ErrNodeNotFound {
 		return err
 	}
@@ -136,7 +136,7 @@ func removeTestFolder() error {
 		return fmt.Errorf("something is wrong, the node's name is %s and not %s", node.Name, testFolderPath)
 	}
 
-	return c.NodeTree.RemoveNode(node)
+	return c.GetNodeTree().RemoveNode(node)
 }
 
 func remotePath(fp string) string {

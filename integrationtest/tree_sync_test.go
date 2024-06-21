@@ -50,10 +50,10 @@ func TestTreeSync(t *testing.T) {
 	}
 
 	// using the second client, sync and find the node
-	if err := c2.NodeTree.Sync(); err != nil {
+	if err := c2.GetNodeTree().Sync(); err != nil {
 		t.Fatal(err)
 	}
-	readmeNode, err := c2.NodeTree.FindNode(remoteReadmeFile)
+	readmeNode, err := c2.GetNodeTree().FindNode(remoteReadmeFile)
 	if err != nil {
 		t.Fatalf("c2.NodeTree.FindNode(%q) error: %s", remoteReadmeFile, err)
 	}

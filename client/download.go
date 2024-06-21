@@ -15,7 +15,7 @@ import (
 func (c *Client) Download(path string) (io.ReadCloser, error) {
 	log.Debugf("downloading %q", path)
 
-	node, err := c.NodeTree.FindNode(path)
+	node, err := c.GetNodeTree().FindNode(path)
 	if err != nil {
 		return nil, err
 	}

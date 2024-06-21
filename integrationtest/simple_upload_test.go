@@ -46,7 +46,7 @@ func TestSimpleUpload(t *testing.T) {
 	}
 
 	// test the NodeTree is updated
-	node, err := c.NodeTree.FindNode(remoteReadmeFile)
+	node, err := c.GetNodeTree().FindNode(remoteReadmeFile)
 	if err != nil {
 		t.Errorf("c.NodeTree.FindNode(%q): got error %s", remoteReadmeFile, err)
 	}
@@ -63,7 +63,7 @@ func TestSimpleUpload(t *testing.T) {
 	if err := c.FetchNodeTree(); err != nil {
 		t.Fatal(err)
 	}
-	node, err = c.NodeTree.FindNode(remoteReadmeFile)
+	node, err = c.GetNodeTree().FindNode(remoteReadmeFile)
 	if err != nil {
 		t.Errorf("reloaded cache, c.NodeTree.FindNode(%q): got error %s", remoteReadmeFile, err)
 	}

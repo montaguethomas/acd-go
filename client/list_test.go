@@ -9,7 +9,7 @@ import (
 
 func TestList(t *testing.T) {
 	c := &Client{
-		NodeTree: node.Mocked,
+		nodeTree: node.Mocked,
 	}
 
 	tests := map[string][]string{
