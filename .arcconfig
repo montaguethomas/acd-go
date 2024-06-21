@@ -1,8 +1,0 @@
-{
-    "load": [
-        "../../github.com/kalbasit/arcanist-go"
-    ],
-    "phabricator.uri": "http://phabricator.nasreddine.com/",
-    "repository.callsign": "GOACD",
-    "unit.engine": "GoTestEngine"
-}

@@ -1,11 +1,11 @@
-package acd
+package client
 
 import (
-	"io/ioutil"
+	"io"
 	"net/http"
 
-	"gopkg.in/acd.v0/internal/constants"
-	"gopkg.in/acd.v0/internal/log"
+	"github.com/montaguethomas/acd-go/internal/constants"
+	"github.com/montaguethomas/acd-go/internal/log"
 )
 
 // CheckResponse validates the response from the Amazon Cloud Drive API. It
@@ -17,7 +17,7 @@ func (c *Client) CheckResponse(res *http.Response) error {
 	}
 	errBody := "no response body"
 	defer res.Body.Close()
-	if data, err := ioutil.ReadAll(res.Body); err == nil {
+	if data, err := io.ReadAll(res.Body); err == nil {
 		errBody = string(data)
 	}
 	var err error

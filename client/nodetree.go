@@ -1,6 +1,6 @@
-package acd
+package client
 
-import "gopkg.in/acd.v0/node"
+import "github.com/montaguethomas/acd-go/node"
 
 // FetchNodeTree fetches and caches the NodeTree.
 func (c *Client) FetchNodeTree() error {

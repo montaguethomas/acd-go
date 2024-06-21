@@ -1,9 +1,9 @@
-package acd
+package client
 
 import (
-	"gopkg.in/acd.v0/internal/constants"
-	"gopkg.in/acd.v0/internal/log"
-	"gopkg.in/acd.v0/node"
+	"github.com/montaguethomas/acd-go/internal/constants"
+	"github.com/montaguethomas/acd-go/internal/log"
+	"github.com/montaguethomas/acd-go/node"
 )
 
 // List returns nodes.Nodes for all of the nodes underneath the path. It's up

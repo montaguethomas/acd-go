@@ -5,8 +5,8 @@ import (
 	"io"
 	"net/http"
 
-	"gopkg.in/acd.v0/internal/constants"
-	"gopkg.in/acd.v0/internal/log"
+	"github.com/montaguethomas/acd-go/internal/constants"
+	"github.com/montaguethomas/acd-go/internal/log"
 )
 
 // Download downloads the node and returns the body as io.ReadCloser or an

@@ -1,10 +1,10 @@
-package acd
+package client
 
 import (
 	"reflect"
 	"testing"
 
-	"gopkg.in/acd.v0/node"
+	"github.com/montaguethomas/acd-go/node"
 )
 
 func TestList(t *testing.T) {
@@ -13,8 +13,8 @@ func TestList(t *testing.T) {
 	}
 
 	tests := map[string][]string{
-		"/":         []string{"README.md", "pictures"},
-		"/pictures": []string{"logo.png"},
+		"/":         {"README.md", "pictures"},
+		"/pictures": {"logo.png"},
 	}
 
 	for path, want := range tests {

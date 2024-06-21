@@ -1,4 +1,4 @@
-package acd
+package client
 
 import (
 	"crypto/md5"
@@ -9,9 +9,9 @@ import (
 	"path/filepath"
 	"strings"
 
-	"gopkg.in/acd.v0/internal/constants"
-	"gopkg.in/acd.v0/internal/log"
-	"gopkg.in/acd.v0/node"
+	"github.com/montaguethomas/acd-go/internal/constants"
+	"github.com/montaguethomas/acd-go/internal/log"
+	"github.com/montaguethomas/acd-go/node"
 )
 
 // Upload uploads io.Reader to the path defined by the filename. It will create
@@ -86,7 +86,7 @@ func (c *Client) uploadFolderFunc(localPath, remoteBasePath string, recursive, o
 		}
 		// are we not recursive and trying to upload a file down the tree?
 		if !recursive && localPath != path.Dir(fpath) {
-			log.Debugf("%q is inside a sub-folder but we are not running recursively, skipping")
+			log.Debugf("%q is inside a sub-folder but we are not running recursively, skipping", fpath)
 			return nil
 		}
 

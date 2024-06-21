@@ -1,2 +1,2 @@
 // Package acd represent an Amazon Cloud Drive client.
-package acd // import "gopkg.in/acd.v0"
+package acdgo // import "github.com/montaguethomas/acd-go"

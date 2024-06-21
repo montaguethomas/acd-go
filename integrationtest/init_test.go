@@ -3,7 +3,6 @@ package integrationtest
 import (
 	"encoding/json"
 	"fmt"
-	"io"
 	"io/ioutil"
 	"os"
 	"path"
@@ -13,22 +12,20 @@ import (
 	"testing"
 	"time"
 
-	"gopkg.in/acd.v0"
-	"gopkg.in/acd.v0/internal/constants"
-	"gopkg.in/acd.v0/internal/log"
+	acd "github.com/montaguethomas/acd-go/client"
+	"github.com/montaguethomas/acd-go/internal/constants"
+	"github.com/montaguethomas/acd-go/internal/log"
 )
 
 const (
 	devNullCacheFile   string = "/dev/null"
 	testFolderBasePath string = "/acd_test_folder"
-	baseTokenFile      string = "acd-token.json"
 )
 
 var (
 	cacheFile      string
 	cacheFiles     []string
 	configFiles    []string
-	tokenFiles     []string
 	testFolderPath string
 	needCleaning   bool
 )
@@ -77,11 +74,6 @@ func cleanUp() {
 	for _, cf := range configFiles {
 		os.Remove(cf)
 	}
-
-	// remove all token files.
-	for _, cf := range tokenFiles {
-		os.Remove(cf)
-	}
 }
 
 func newTempFile(baseName string) string {
@@ -104,29 +96,15 @@ func newUncachedClient() (*acd.Client, error) {
 }
 
 func newConfigFile(cacheFile string) string {
-	tokenFile := newTempFile("acd-token-")
-	tokenFiles = append(tokenFiles, tokenFile)
 	configFile := newTempFile("acd-config-")
 	configFiles = append(configFiles, configFile)
-
-	of, err := os.Open(baseTokenFile)
-	if err != nil {
-		log.Fatal(err)
-	}
-	defer of.Close()
-	nf, err := os.OpenFile(tokenFile, os.O_RDWR|os.O_CREATE|os.O_TRUNC, 0600)
-	if err != nil {
-		log.Fatal(err)
-	}
-	defer nf.Close()
-	io.Copy(nf, of)
 
 	cf, err := os.Create(configFile)
 	if err != nil {
 		log.Fatal(err)
 	}
 	config := &acd.Config{
-		TokenFile: tokenFile,
+		Cookies:   map[string]string{},
 		CacheFile: cacheFile,
 	}
 	defer cf.Close()
