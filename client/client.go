@@ -3,7 +3,6 @@ package client
 import (
 	"encoding/json"
 	"net/http"
-	"net/url"
 	"os"
 	"time"
 
@@ -29,6 +28,8 @@ type Config struct {
 	// will cancel the request and return. A timeout of 0 (the default) means
 	// no timeout. See http://godoc.org/net/http#Client for more information.
 	Timeout time.Duration `json:"timeout"`
+
+	UserAgent string `json:"userAgent"`
 }
 
 // Client provides a client for Amazon Cloud Drive.
@@ -57,39 +58,18 @@ type EndpointResponse struct {
 	ThumbnailServiceURL string `json:"thumbnailServiceUrl"`
 }
 
-type SharedCookieJar struct {
-	cookies []*http.Cookie
-}
-
-func (j *SharedCookieJar) SetCookies(u *url.URL, cookies []*http.Cookie) {
-	j.cookies = append(j.cookies, cookies...)
-}
-
-func (j *SharedCookieJar) Cookies(u *url.URL) (cookies []*http.Cookie) {
-	return j.cookies
-}
-
 // New returns a new Amazon Cloud Drive "acd" Client
 func New(config *Config) (*Client, error) {
-	jar := &SharedCookieJar{}
-	cookies := []*http.Cookie{}
-	for name, value := range config.Cookies {
-		cookies = append(cookies, &http.Cookie{Name: name, Value: value})
-	}
-	jar.SetCookies(nil, cookies)
-
 	c := &Client{
 		config:    config,
 		cacheFile: config.CacheFile,
 		httpClient: &http.Client{
-			Jar:     jar,
 			Timeout: config.Timeout,
 		},
 	}
 	if err := setEndpoints(c); err != nil {
 		return nil, err
 	}
-
 	return c, nil
 }
 
@@ -100,6 +80,15 @@ func (c *Client) Close() error {
 
 // Do invokes net/http.Client.Do(). Refer to net/http.Client.Do() for documentation.
 func (c *Client) Do(r *http.Request) (*http.Response, error) {
+	for name, value := range c.config.Cookies {
+		r.AddCookie(&http.Cookie{Name: name, Value: value})
+	}
+	if value, ok := c.config.Cookies["session-id"]; ok {
+		r.Header.Add("x-amzn-sessionid", value)
+	}
+	if c.config.UserAgent != "" {
+		r.Header.Add("user-agent", c.config.UserAgent)
+	}
 	return c.httpClient.Do(r)
 }
 
