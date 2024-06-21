@@ -37,6 +37,7 @@ func setEndpoints(c *Client) error {
 		return constants.ErrJSONDecodingResponseBody
 	}
 
+	log.Debugf("Endpoint Results: %+v", er)
 	c.contentURL = er.ContentURL
 	c.metadataURL = er.MetadataURL
 	c.endpoints = er

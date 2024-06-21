@@ -38,7 +38,7 @@ func TestDiffSliceStr(t *testing.T) {
 		}
 
 		if !reflect.DeepEqual(want, got) {
-			t.Errorf("diffSliceStr(%v, %v): want %v, got %v", ss[0], ss[1], want, got)
+			t.Errorf("diffSliceStr(%+v, %+v): want %+v, got %+v", ss[0], ss[1], want, got)
 		}
 	}
 }

@@ -27,7 +27,7 @@ func TestList(t *testing.T) {
 			names = append(names, node.Name)
 		}
 		if got := names; !reflect.DeepEqual(want, got) {
-			t.Errorf("c.List(%q): want %v got %v", "/", want, got)
+			t.Errorf("c.List(%q): want %+v got %+v", "/", want, got)
 		}
 	}
 }
