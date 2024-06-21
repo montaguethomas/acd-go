@@ -110,8 +110,10 @@ func (n *Node) RemoveChild(child *Node) {
 			if i < len(n.Nodes)-1 {
 				copy(n.Nodes[i:], n.Nodes[i+1:])
 			}
-			n.Nodes[len(n.Nodes)-1] = nil
-			n.Nodes = n.Nodes[:len(n.Nodes)-1]
+			if len(n.Nodes) > 0 {
+				n.Nodes[len(n.Nodes)-1] = nil
+				n.Nodes = n.Nodes[:len(n.Nodes)-1]
+			}
 			found = true
 			break
 		}
