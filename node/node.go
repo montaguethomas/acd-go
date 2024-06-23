@@ -3,6 +3,7 @@ package node
 import (
 	"encoding/json"
 	"net/http"
+	"slices"
 	"time"
 
 	"github.com/montaguethomas/acd-go/constants"
@@ -154,21 +155,12 @@ func (n *Node) AddChild(child *Node) {
 // RemoveChild remove a new child for the node
 func (n *Node) RemoveChild(child *Node) {
 	found := false
-
-	for i, n := range n.Nodes {
-		if n == child {
-			if i < len(n.Nodes)-1 {
-				copy(n.Nodes[i:], n.Nodes[i+1:])
-			}
-			if len(n.Nodes) > 0 {
-				n.Nodes[len(n.Nodes)-1] = nil
-				n.Nodes = n.Nodes[:len(n.Nodes)-1]
-			}
-			found = true
-			break
-		}
+	i := slices.Index(n.Nodes, child)
+	if i >= 0 {
+		found = true
+		n.Nodes = slices.Delete(n.Nodes, i, i+1)
 	}
-	log.Debugf("removing %s from %s: %t", child.Name, n.Name, found)
+	log.Debugf("removed %s from %s: %t", child.Name, n.Name, found)
 }
 
 func (n *Node) update(newNode *Node) error {

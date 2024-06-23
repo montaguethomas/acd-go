@@ -99,10 +99,8 @@ func (nt *Tree) MkdirAll(path string) (*Node, error) {
 		return nil, constants.ErrFileExistsAndIsNotFolder
 	}
 
-	// chop off the first /.
-	if strings.HasPrefix(path, "/") {
-		path = path[1:]
-	}
+	// chop off any leading or trailing slashes.
+	path = strings.Trim(path, "/")
 	parts := strings.Split(path, "/")
 	if len(parts) == 0 {
 		log.Errorf("%s: %s", constants.ErrCannotCreateRootNode, path)
