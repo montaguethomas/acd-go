@@ -9,37 +9,87 @@ import (
 	"github.com/montaguethomas/acd-go/log"
 )
 
+type NodeKind string
+
+const (
+	KindFile   NodeKind = "FILE"
+	KindFolder NodeKind = "FOLDER"
+	KindAsset  NodeKind = "ASSET"
+)
+
+type NodeStatus string
+
+const (
+	StatusAvailable NodeStatus = "AVAILABLE"
+	StatusTrash     NodeStatus = "TRASH"
+	StatusPurged    NodeStatus = "PURGED"
+)
+
 type (
 	// Nodes is a slice of nodes
 	Nodes []*Node
 
 	// ContentProperties hold the properties of the node.
 	ContentProperties struct {
-		Version     uint64    `json:"version,omitempty"`
-		Extension   string    `json:"extension,omitempty"`
-		Size        uint64    `json:"size,omitempty"`
-		MD5         string    `json:"md5,omitempty"`
-		ContentType string    `json:"contentType,omitempty"`
+		// content version of the file (number)
+		Version uint64 `json:"version,omitempty"`
+		// md5 of a file content in HEX representation. (string)
+		Extension string `json:"extension,omitempty"`
+		// byte size (number, positive integer)
+		Size uint64 `json:"size,omitempty"`
+		// Media Type defined as per RFC 2046 (string)
+		MD5 string `json:"md5,omitempty"`
+		// file extension (not including the '.') (string)
+		ContentType string `json:"contentType,omitempty"`
+		// date extracted from media types (images and videos) (ISO8601 date with timezone offset)
 		ContentDate time.Time `json:"contentDate,omitempty"`
 	}
+
+	Property map[string]string
 
 	// Node represents a digital asset on the Amazon Cloud Drive, including files
 	// and folders, in a parent-child relationship. A node contains only metadata
 	// (e.g. folder) or it contains metadata and content (e.g. file).
+	// https://developer.amazon.com/docs/amazon-drive/ad-restful-api-nodes.html
 	Node struct {
 		// Coming from Amazon
-		ID                string            `json:"id,omitempty"`
-		Name              string            `json:"name,omitempty"`
-		Kind              string            `json:"kind,omitempty"`
-		Parents           []string          `json:"Parents,omitempty"`
-		Status            string            `json:"status,omitempty"`
-		Labels            []string          `json:"labels,omitempty"`
-		CreatedBy         string            `json:"createdBy,omitempty"`
-		CreationDate      time.Time         `json:"creationDate,omitempty"`
-		ModifiedDate      time.Time         `json:"modifiedDate,omitempty"`
-		Version           uint64            `json:"version,omitempty"`
+		// unique identifier of a file
+		ID string `json:"id,omitempty"`
+		// user friendly name of a file
+		Name string `json:"name,omitempty"`
+		// literal string "FILE", "FOLDER", "ASSET"
+		Kind NodeKind `json:"kind,omitempty"`
+		// metadata version of the file
+		Version uint64 `json:"version,omitempty"`
+		// Last modified date (ISO8601 date with timezone offset)
+		ModifiedDate time.Time `json:"modifiedDate,omitempty"`
+		// First uploaded date (ISO8601 date with timezone offset)
+		CreatedDate time.Time `json:"createdDate,omitempty"`
+		// List of Strings that are labeled to the file. Each label Max 256 characters. Max 10 labels.
+		Labels []string `json:"labels,omitempty"`
+		// short description of the file. Max 500 characters.
+		Description string `json:"description,omitempty"`
+		// Friendly name of Application Id which created the file
+		CreatedBy string `json:"createdBy,omitempty"`
+		// List of parent folder Ids
+		Parents []string `json:"Parents,omitempty"`
+		// either "AVAILABLE", "TRASH", "PURGED"
+		Status NodeStatus `json:"status,omitempty"`
+		// map of application properties {"owner_app_id1" : {"key":"value", "key2","value2"}, "owner_app_id2" : {"foo":"bar"} }
+		Properties map[string]Property `json:"properties,omitempty"`
+
+		// Files
+		// Pre authenticated link enables viewing the file content for limited times only; has to be specifically requested
 		TempLink          string            `json:"tempLink,omitempty"`
 		ContentProperties ContentProperties `json:"contentProperties,omitempty"`
+
+		// Folders
+		// indicates whether the file is restricted to that app only or accessible to all the applications
+		Restricted bool `json:"restricted,omitempty"`
+		// indicates whether the folder is a root folder or not
+		IsRoot bool `json:"isRoot,omitempty"`
+		// set if node is shared
+		IsShared bool `json:"isShared,omitempty"`
 
 		// Internal
 		Nodes  Nodes `json:"nodes,omitempty"`
@@ -48,11 +98,11 @@ type (
 	}
 
 	newNode struct {
-		Name       string            `json:"name,omitempty"`
-		Kind       string            `json:"kind,omitempty"`
-		Labels     []string          `json:"labels,omitempty"`
-		Properties map[string]string `json:"properties"`
-		Parents    []string          `json:"parents"`
+		Name       string              `json:"name,omitempty"`
+		Kind       string              `json:"kind,omitempty"`
+		Labels     []string            `json:"labels,omitempty"`
+		Properties map[string]Property `json:"properties"`
+		Parents    []string            `json:"parents"`
 	}
 
 	client interface {
@@ -76,22 +126,22 @@ func (n *Node) ModTime() time.Time {
 
 // IsFile returns whether the node represents a file.
 func (n *Node) IsFile() bool {
-	return n.Kind == "FILE"
+	return n.Kind == KindFile
 }
 
 // IsDir returns whether the node represents a folder.
 func (n *Node) IsDir() bool {
-	return n.Kind == "FOLDER"
+	return n.Kind == KindFolder
 }
 
 // IsAsset returns whether the node represents an asset.
 func (n *Node) IsAsset() bool {
-	return n.Kind == "ASSET"
+	return n.Kind == KindAsset
 }
 
 // Available returns true if the node is available
 func (n *Node) Available() bool {
-	return n.Status == "AVAILABLE"
+	return n.Status == StatusAvailable
 }
 
 // AddChild add a new child for the node

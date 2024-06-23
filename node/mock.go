@@ -9,7 +9,7 @@ var (
 		Parents:      []string{},
 		Status:       "AVAILABLE",
 		CreatedBy:    "CloudDriveFiles",
-		CreationDate: time.Now(),
+		CreatedDate:  time.Now(),
 		ModifiedDate: time.Now(),
 		Version:      1,
 		Root:         true,
@@ -21,7 +21,7 @@ var (
 				Parents:      []string{"/"},
 				Status:       "AVAILABLE",
 				CreatedBy:    "CloudDriveFiles",
-				CreationDate: time.Now(),
+				CreatedDate:  time.Now(),
 				ModifiedDate: time.Now(),
 				Version:      1,
 				ContentProperties: ContentProperties{
@@ -41,7 +41,7 @@ var (
 				Parents:      []string{"/"},
 				Status:       "AVAILABLE",
 				CreatedBy:    "CloudDriveFiles",
-				CreationDate: time.Now(),
+				CreatedDate:  time.Now(),
 				ModifiedDate: time.Now(),
 				Version:      1,
 				Nodes: Nodes{
@@ -52,7 +52,7 @@ var (
 						Parents:      []string{"/pictures"},
 						Status:       "AVAILABLE",
 						CreatedBy:    "CloudDriveFiles",
-						CreationDate: time.Now(),
+						CreatedDate:  time.Now(),
 						ModifiedDate: time.Now(),
 						Version:      1,
 						ContentProperties: ContentProperties{
