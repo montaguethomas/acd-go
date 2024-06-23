@@ -11,6 +11,7 @@ func TestFindNode(t *testing.T) {
 		"//rEaDme.MD":         "/README.md",
 		"///REadmE.Md":        "/README.md",
 		"/pictuREs":           "/pictures",
+		"/pictuREs/":          "/pictures",
 		"/pictures/loGO.png":  "/pictures/logo.png",
 		"/pictures//loGO.png": "/pictures/logo.png",
 	}

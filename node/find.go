@@ -15,8 +15,8 @@ func (nt *Tree) FindNode(path string) (*Node, error) {
 	// replace multiple n*/ with /
 	re := regexp.MustCompile("/[/]*")
 	path = string(re.ReplaceAll([]byte(path), []byte("/")))
-	// chop off the first /.
-	path = strings.TrimPrefix(path, "/")
+	// chop off any leading or trailing slashes.
+	path = strings.Trim(path, "/")
 	// did we ask for the root node?
 	if path == "" {
 		return nt.Node, nil
