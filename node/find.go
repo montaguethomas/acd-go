@@ -4,8 +4,8 @@ import (
 	"regexp"
 	"strings"
 
-	"github.com/montaguethomas/acd-go/internal/constants"
-	"github.com/montaguethomas/acd-go/internal/log"
+	"github.com/montaguethomas/acd-go/constants"
+	"github.com/montaguethomas/acd-go/log"
 )
 
 // FindNode finds a node for a particular path.

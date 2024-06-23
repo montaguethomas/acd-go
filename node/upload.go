@@ -8,8 +8,8 @@ import (
 	"mime/multipart"
 	"net/http"
 
-	"github.com/montaguethomas/acd-go/internal/constants"
-	"github.com/montaguethomas/acd-go/internal/log"
+	"github.com/montaguethomas/acd-go/constants"
+	"github.com/montaguethomas/acd-go/log"
 )
 
 // CreateFolder creates the named folder under the node

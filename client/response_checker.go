@@ -4,8 +4,8 @@ import (
 	"io"
 	"net/http"
 
-	"github.com/montaguethomas/acd-go/internal/constants"
-	"github.com/montaguethomas/acd-go/internal/log"
+	"github.com/montaguethomas/acd-go/constants"
+	"github.com/montaguethomas/acd-go/log"
 )
 
 // CheckResponse validates the response from the Amazon Cloud Drive API. It

@@ -5,8 +5,8 @@ import (
 	"net/http"
 	"time"
 
-	"github.com/montaguethomas/acd-go/internal/constants"
-	"github.com/montaguethomas/acd-go/internal/log"
+	"github.com/montaguethomas/acd-go/constants"
+	"github.com/montaguethomas/acd-go/log"
 )
 
 type (

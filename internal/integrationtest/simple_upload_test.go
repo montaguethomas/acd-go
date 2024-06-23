@@ -7,7 +7,7 @@ import (
 	"os"
 	"testing"
 
-	"github.com/montaguethomas/acd-go/internal/constants"
+	"github.com/montaguethomas/acd-go/constants"
 )
 
 func TestSimpleUpload(t *testing.T) {

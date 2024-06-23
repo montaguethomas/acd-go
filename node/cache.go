@@ -4,8 +4,8 @@ import (
 	"encoding/gob"
 	"os"
 
-	"github.com/montaguethomas/acd-go/internal/constants"
-	"github.com/montaguethomas/acd-go/internal/log"
+	"github.com/montaguethomas/acd-go/constants"
+	"github.com/montaguethomas/acd-go/log"
 )
 
 func (nt *Tree) loadCache() error {
