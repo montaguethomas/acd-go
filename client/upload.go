@@ -16,7 +16,7 @@ import (
 
 // Upload uploads io.Reader to the path defined by the filename. It will create
 // any non-existing folders.
-func (c *Client) Upload(filename string, overwrite bool, r io.Reader) error {
+func (c *Client) Upload(filename string, overwrite bool, r io.Reader) (*node.Node, error) {
 	var (
 		err      error
 		logLevel = log.GetLevel()
@@ -26,7 +26,7 @@ func (c *Client) Upload(filename string, overwrite bool, r io.Reader) error {
 
 	node, err = c.GetNodeTree().MkdirAll(path.Dir(filename))
 	if err != nil {
-		return err
+		return nil, err
 	}
 	{
 		log.SetLevel(log.DisableLogLevel)
@@ -36,19 +36,21 @@ func (c *Client) Upload(filename string, overwrite bool, r io.Reader) error {
 	if err == nil {
 		if !overwrite {
 			log.Errorf("%s: %s", constants.ErrFileExists, filename)
-			return constants.ErrFileExists
+			return nil, constants.ErrFileExists
 		}
 		if err = fileNode.Overwrite(r); err != nil {
-			return err
+			return nil, err
 		}
 
-		return nil
-	}
-	if _, err = node.Upload(path.Base(filename), r); err != nil {
-		return err
+		return fileNode, nil
 	}
 
-	return nil
+	fileNode, err = node.Upload(path.Base(filename), r)
+	if err != nil {
+		return nil, err
+	}
+
+	return fileNode, nil
 }
 
 // UploadFolder uploads an entire folder.
