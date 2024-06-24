@@ -20,7 +20,7 @@ func (c *Client) Download(path string) (io.ReadCloser, error) {
 		return nil, err
 	}
 
-	return node.Download()
+	return c.GetNodeTree().Download(node)
 }
 
 // DownloadFolder downloads an entire folder to a path, if recursive is true,
@@ -49,7 +49,7 @@ func (c *Client) DownloadFolder(localPath, remotePath string, recursive bool) er
 			continue
 		}
 
-		con, err := node.Download()
+		con, err := c.GetNodeTree().Download(node)
 		if err != nil {
 			return err
 		}

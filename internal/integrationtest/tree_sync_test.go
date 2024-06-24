@@ -24,14 +24,8 @@ func TestTreeSync(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if err := c1.FetchNodeTree(); err != nil {
-		t.Fatal(err)
-	}
 	c2, err := newCachedClient(true)
 	if err != nil {
-		t.Fatal(err)
-	}
-	if err := c2.FetchNodeTree(); err != nil {
 		t.Fatal(err)
 	}
 

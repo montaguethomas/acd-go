@@ -3,7 +3,7 @@ package node
 import "testing"
 
 func TestFindNode(t *testing.T) {
-	// tests are [path -> ID]
+	// tests are [path -> Id]
 	tests := map[string]string{
 		"/":                   "/",
 		"/README.md":          "/README.md",
@@ -16,13 +16,13 @@ func TestFindNode(t *testing.T) {
 		"/pictures//loGO.png": "/pictures/logo.png",
 	}
 
-	for path, ID := range tests {
+	for path, Id := range tests {
 		n, err := Mocked.FindNode(path)
 		if err != nil {
 			t.Fatalf("MockNodeTree.FindNode(%q) error: %s", path, err)
 		}
-		if want, got := ID, n.ID; want != got {
-			t.Errorf("MockNodeTree.FindNode(%q).ID: want %s got %s", path, want, got)
+		if want, got := Id, n.Id; want != got {
+			t.Errorf("MockNodeTree.FindNode(%q).Id: want %s got %s", path, want, got)
 		}
 	}
 }
@@ -36,12 +36,12 @@ func TestFindById(t *testing.T) {
 	}
 
 	for _, test := range tests {
-		n, err := Mocked.FindByID(test)
+		n, err := Mocked.FindById(test)
 		if err != nil {
-			t.Errorf("MockNodeTree.FindByID(%q) error: %s", test, err)
+			t.Errorf("MockNodeTree.FindById(%q) error: %s", test, err)
 		}
-		if want, got := test, n.ID; want != got {
-			t.Errorf("MockNodeTree.FindByID(%q).ID: want %s got %s", test, want, got)
+		if want, got := test, n.Id; want != got {
+			t.Errorf("MockNodeTree.FindById(%q).Id: want %s got %s", test, want, got)
 		}
 	}
 }

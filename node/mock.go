@@ -4,7 +4,7 @@ import "time"
 
 var (
 	rootNode = &Node{
-		ID:           "/",
+		Id:           "/",
 		Kind:         "FOLDER",
 		Parents:      []string{},
 		Status:       "AVAILABLE",
@@ -12,10 +12,10 @@ var (
 		CreatedDate:  time.Now(),
 		ModifiedDate: time.Now(),
 		Version:      1,
-		Root:         true,
+		IsRoot:       true,
 		Nodes: Nodes{
-			&Node{
-				ID:           "/README.md",
+			"readme.md": &Node{
+				Id:           "/README.md",
 				Name:         "README.md",
 				Kind:         "FILE",
 				Parents:      []string{"/"},
@@ -33,9 +33,8 @@ var (
 					ContentDate: time.Now(),
 				},
 			},
-
-			&Node{
-				ID:           "/pictures",
+			"pictures": &Node{
+				Id:           "/pictures",
 				Name:         "pictures",
 				Kind:         "FOLDER",
 				Parents:      []string{"/"},
@@ -45,8 +44,8 @@ var (
 				ModifiedDate: time.Now(),
 				Version:      1,
 				Nodes: Nodes{
-					&Node{
-						ID:           "/pictures/logo.png",
+					"logo.png": &Node{
+						Id:           "/pictures/logo.png",
 						Name:         "logo.png",
 						Kind:         "FILE",
 						Parents:      []string{"/pictures"},
@@ -69,7 +68,7 @@ var (
 		},
 	}
 
-	// Mocked is a valid tree (mock). The IDs are the fully-qualified path of
+	// Mocked is a valid tree (mock). The Ids are the fully-qualified path of
 	// the file or folder to make testing easier.
 	// /
 	// |-- README.md
@@ -78,11 +77,11 @@ var (
 	//     | -- logo.png
 	Mocked = &Tree{
 		Node: rootNode,
-		nodeMap: map[string]*Node{
+		nodeIdMap: map[string]*Node{
 			"/":                  rootNode,
-			"/README.md":         rootNode.Nodes[0],
-			"/pictures":          rootNode.Nodes[1],
-			"/pictures/logo.png": rootNode.Nodes[1].Nodes[0],
+			"/README.md":         rootNode.Nodes["readme.md"],
+			"/pictures":          rootNode.Nodes["pictures"],
+			"/pictures/logo.png": rootNode.Nodes["pictures"].Nodes["logo.png"],
 		},
 	}
 )

@@ -2,9 +2,11 @@ package node
 
 import (
 	"encoding/json"
+	"fmt"
 	"net/http"
 	"net/url"
 	"strings"
+	"sync"
 	"time"
 
 	"github.com/montaguethomas/acd-go/constants"
@@ -14,17 +16,30 @@ import (
 type (
 	// Tree represents a node tree.
 	Tree struct {
+		// Exported in order to support gob encode/decode
 		*Node
-
-		// Internal
 		LastUpdated time.Time
 		Checkpoint  string
 
-		client    client
+		// Internal
 		cacheFile string
-		nodeMap   map[string]*Node
+		chunkSize int
+		client    client
+		mutex     sync.Mutex
+		nodeIdMap map[string]*Node
+		syncDone  chan struct{}
 	}
 
+	// Amazon Cloud Drive Client interface
+	client interface {
+		GetMetadataURL(string) string
+		GetContentURL(string) string
+		Do(*http.Request) (*http.Response, error)
+		CheckResponse(*http.Response) error
+		GetNodeTree() *Tree
+	}
+
+	// Response Body for listing nodes
 	nodeList struct {
 		ETagResponse string  `json:"eTagResponse"`
 		Count        uint64  `json:"count,omitempty"`
@@ -34,49 +49,113 @@ type (
 )
 
 // NewTree returns the root node (the head of the tree).
-func NewTree(c client, cacheFile string) (*Tree, error) {
+func NewTree(c client, cacheFile string, chunkSize int, syncInterval time.Duration) (*Tree, error) {
 	nt := &Tree{
 		cacheFile: cacheFile,
 		client:    c,
+		chunkSize: chunkSize,
+		nodeIdMap: make(map[string]*Node),
 	}
-	if err := nt.loadOrFetch(); err != nil {
+
+	// Load data cache and sync
+	if err := nt.loadCache(); err != nil {
+		log.Debug(err)
+	}
+	if err := nt.Sync(); err != nil {
+		log.Errorf("initial sync failed %s", err)
 		return nil, err
 	}
-	if err := nt.saveCache(); err != nil {
-		return nil, err
-	}
+
+	ticker := time.NewTicker(syncInterval)
+	nt.syncDone = make(chan struct{}, 1)
+	go func() {
+		for {
+			select {
+			case <-nt.syncDone:
+				ticker.Stop()
+				return
+			case <-ticker.C:
+				log.Debug("Background sync starting.")
+				if err := nt.Sync(); err != nil {
+					switch err {
+					case constants.ErrMustFetchFresh:
+						log.Info("Background sync must refresh the node tree.")
+						if err := nt.fetchFresh(); err != nil {
+							log.Errorf("Background sync failed to fetch fresh: %s", err)
+						}
+					default:
+						log.Errorf("Background sync error: %s", err)
+					}
+				}
+				log.Debug("Background sync completed.")
+			}
+		}
+	}()
 
 	return nt, nil
 }
 
 // Close finalizes the NodeTree
 func (nt *Tree) Close() error {
+	nt.syncDone <- struct{}{}
 	return nt.saveCache()
+}
+
+func (nt *Tree) Lock() {
+	nt.mutex.Lock()
+}
+func (nt *Tree) Unlock() {
+	nt.mutex.Unlock()
 }
 
 // RemoveNode removes this node from the server and from the NodeTree.
 func (nt *Tree) RemoveNode(n *Node) error {
-	if err := n.Remove(); err != nil {
+	putURL := nt.client.GetMetadataURL(fmt.Sprintf("/trash/%s", n.Id))
+	req, err := http.NewRequest("PUT", putURL, nil)
+	if err != nil {
+		log.Errorf("%s: %s", constants.ErrCreatingHTTPRequest, err)
+		return constants.ErrCreatingHTTPRequest
+	}
+	res, err := nt.client.Do(req)
+	if err != nil {
+		log.Errorf("%s: %s", constants.ErrDoingHTTPRequest, err)
+		return constants.ErrDoingHTTPRequest
+	}
+	if err := nt.client.CheckResponse(res); err != nil {
 		return err
 	}
 
-	for _, parentID := range n.Parents {
-		parent, err := nt.FindByID(parentID)
-		if err != nil {
-			log.Debugf("parent ID %s not found", parentID)
+	nt.removeNodeFromTree(n)
+	return nil
+}
+
+func (nt *Tree) addNodeToNodeIdMap(n *Node) {
+	nt.Lock()
+	nt.nodeIdMap[n.Id] = n
+	nt.Unlock()
+}
+
+func (nt *Tree) removeNodeFromTree(n *Node) {
+	for _, parentId := range n.Parents {
+		parent, ok := nt.nodeIdMap[parentId]
+		if !ok {
+			log.Debugf("node.Tree removeNodeFromTree parent Id %s not found", parentId)
 			continue
 		}
-		parent.RemoveChild(n)
+		parent.removeChild(n)
 	}
-
-	return nil
+	nt.Lock()
+	delete(nt.nodeIdMap, n.Id)
+	// need to remove all child nodes of n from nodeIdMap? or will sync handle those updates?
+	// sync changes will include nodes that are deleted and will trigger remove from tree on them.
+	nt.Unlock()
 }
 
 // MkdirAll creates a directory named path, along with any necessary parents,
 // and returns the directory node and nil, or else returns an error. If path is
-// already a directory, MkdirAll does nothing and returns the directory node
+// already a directory, MkDirAll does nothing and returns the directory node
 // and nil.
-func (nt *Tree) MkdirAll(path string) (*Node, error) {
+func (nt *Tree) MkDirAll(path string) (*Node, error) {
 	var (
 		err        error
 		folderNode = nt.Node
@@ -117,7 +196,7 @@ func (nt *Tree) MkdirAll(path string) (*Node, error) {
 			return nil, err
 		}
 		if err == constants.ErrNodeNotFound {
-			nextNode, err = folderNode.CreateFolder(part)
+			nextNode, err = nt.CreateFolder(folderNode, part)
 			if err != nil {
 				return nil, err
 			}
@@ -134,24 +213,42 @@ func (nt *Tree) MkdirAll(path string) (*Node, error) {
 	return folderNode, nil
 }
 
-func (nt *Tree) setClient(n *Node) {
-	n.client = nt.client
-	for _, node := range n.Nodes {
-		nt.setClient(node)
+func (nt *Tree) buildNodeIdMap(current *Node) {
+	if nt.Node == current {
+		nt.Lock()
+		nt.nodeIdMap = make(map[string]*Node)
+		nt.Unlock()
+	}
+	nt.Lock()
+	nt.nodeIdMap[current.Id] = current
+	nt.Unlock()
+	for _, node := range current.Nodes {
+		nt.buildNodeIdMap(node)
 	}
 }
 
-func (nt *Tree) buildNodeMap(current *Node) {
-	if nt.Node == current {
-		nt.nodeMap = make(map[string]*Node)
-	}
-	nt.nodeMap[current.ID] = current
-	for _, node := range current.Nodes {
-		nt.buildNodeMap(node)
+func (nt *Tree) buildNodeTree() {
+	log.Debug("node.Tree buildNodeTree starting.")
+	defer log.Debug("node.Tree buildNodeTree completed.")
+
+	for _, node := range nt.nodeIdMap {
+		if node.IsRoot {
+			nt.Lock()
+			nt.Node = node
+			nt.Unlock()
+		}
+		for _, parentId := range node.Parents {
+			if parent, ok := nt.nodeIdMap[parentId]; ok {
+				parent.addChild(node)
+			}
+		}
 	}
 }
 
 func (nt *Tree) loadOrFetch() error {
+	log.Debug("node.Tree loadOrFetch starting.")
+	defer log.Debug("node.Tree loadOrFetch completed.")
+
 	var err error
 	if err = nt.loadCache(); err != nil {
 		log.Debug(err)
@@ -176,6 +273,9 @@ func (nt *Tree) loadOrFetch() error {
 }
 
 func (nt *Tree) fetchFresh() error {
+	log.Debug("node.Tree fetchFresh starting.")
+	defer log.Debug("node.Tree fetchFresh completed.")
+
 	// grab the list of all of the nodes from the server.
 	var nextToken string
 	var nodes []*Node
@@ -223,28 +323,32 @@ func (nt *Tree) fetchFresh() error {
 		}
 	}
 
-	nodeMap := make(map[string]*Node, len(nodes))
+	nodeIdMap := make(map[string]*Node, len(nodes))
 	for _, node := range nodes {
-		if !node.Available() {
+		if !node.IsAvailable() {
 			continue
 		}
-		nt.setClient(node)
-		nodeMap[node.ID] = node
+		nodeIdMap[node.Id] = node
 	}
 
-	for _, node := range nodeMap {
+	for _, node := range nodeIdMap {
 		if node.Name == "" && node.IsDir() && len(node.Parents) == 0 {
+			nt.Lock()
 			nt.Node = node
-			node.Root = true
+			nt.Unlock()
 		}
 
-		for _, parentID := range node.Parents {
-			if pn, found := nodeMap[parentID]; found {
-				pn.Nodes = append(pn.Nodes, node)
+		for _, parentId := range node.Parents {
+			if pn, found := nodeIdMap[parentId]; found {
+				pn.Nodes[strings.ToLower(node.Name)] = node
 			}
 		}
 	}
 
-	nt.nodeMap = nodeMap
+	nt.Lock()
+	nt.Checkpoint = ""
+	nt.LastUpdated = time.Now().UTC()
+	nt.nodeIdMap = nodeIdMap
+	nt.Unlock()
 	return nil
 }

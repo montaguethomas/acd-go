@@ -24,7 +24,7 @@ func (c *Client) Upload(filename string, overwrite bool, r io.Reader) (*node.Nod
 		node     *node.Node
 	)
 
-	node, err = c.GetNodeTree().MkdirAll(path.Dir(filename))
+	node, err = c.GetNodeTree().MkDirAll(path.Dir(filename))
 	if err != nil {
 		return nil, err
 	}
@@ -38,14 +38,14 @@ func (c *Client) Upload(filename string, overwrite bool, r io.Reader) (*node.Nod
 			log.Errorf("%s: %s", constants.ErrFileExists, filename)
 			return nil, constants.ErrFileExists
 		}
-		if err = fileNode.Overwrite(r); err != nil {
+		if err = c.GetNodeTree().Overwrite(fileNode, r); err != nil {
 			return nil, err
 		}
 
 		return fileNode, nil
 	}
 
-	fileNode, err = node.Upload(path.Base(filename), r)
+	fileNode, err = c.GetNodeTree().Upload(node, path.Base(filename), r)
 	if err != nil {
 		return nil, err
 	}
@@ -93,7 +93,7 @@ func (c *Client) uploadFolderFunc(localPath, remoteBasePath string, recursive, o
 		}
 
 		log.Infof("uploading %q to %q", fpath, remoteFilename)
-		if remoteNode, err = c.GetNodeTree().MkdirAll(remotePath); err != nil {
+		if remoteNode, err = c.GetNodeTree().MkDirAll(remotePath); err != nil {
 			return err
 		}
 
@@ -129,11 +129,11 @@ func (c *Client) uploadFolderFunc(localPath, remoteBasePath string, recursive, o
 			}
 
 			f.Seek(0, 0)
-			return fileNode.Overwrite(f)
+			return c.GetNodeTree().Overwrite(fileNode, f)
 		}
 
 		f.Seek(0, 0)
-		if _, err := remoteNode.Upload(path.Base(fpath), f); err != nil && err != constants.ErrNoContentsToUpload {
+		if _, err := c.GetNodeTree().Upload(remoteNode, path.Base(fpath), f); err != nil && err != constants.ErrNoContentsToUpload {
 			return err
 		}
 

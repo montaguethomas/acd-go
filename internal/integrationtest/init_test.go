@@ -89,12 +89,12 @@ func newCachedClient(ncf bool) (*acd.Client, error) {
 		cacheFiles = append(cacheFiles, cacheFile)
 	}
 	config, _ := acd.LoadConfig(newConfigFile(cacheFile))
-	return acd.New(config)
+	return acd.New(config, 50, time.Minute)
 }
 
 func newUncachedClient() (*acd.Client, error) {
 	config, _ := acd.LoadConfig(newConfigFile(devNullCacheFile))
-	return acd.New(config)
+	return acd.New(config, 50, time.Minute)
 }
 
 func newConfigFile(cacheFile string) string {
@@ -120,9 +120,6 @@ func newConfigFile(cacheFile string) string {
 func removeTestFolder() error {
 	c, err := newUncachedClient()
 	if err != nil {
-		return err
-	}
-	if err := c.FetchNodeTree(); err != nil {
 		return err
 	}
 	node, err := c.GetNodeTree().FindNode(testFolderPath)

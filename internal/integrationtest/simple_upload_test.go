@@ -37,9 +37,6 @@ func TestSimpleUpload(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if err := c.FetchNodeTree(); err != nil {
-		t.Fatal(err)
-	}
 	in.Seek(0, 0)
 	if _, err := c.Upload(remoteReadmeFile, false, in); err != nil {
 		t.Errorf("error uploading %s to %s: %s", readmeFile, remoteReadmeFile, err)
@@ -60,9 +57,6 @@ func TestSimpleUpload(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if err := c.FetchNodeTree(); err != nil {
-		t.Fatal(err)
-	}
 	node, err = c.GetNodeTree().FindNode(remoteReadmeFile)
 	if err != nil {
 		t.Errorf("reloaded cache, c.NodeTree.FindNode(%q): got error %s", remoteReadmeFile, err)
@@ -76,10 +70,7 @@ func TestSimpleUpload(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if err := uc.FetchNodeTree(); err != nil {
-		t.Fatal(err)
-	}
-	out, err := c.Download(remoteReadmeFile)
+	out, err := uc.Download(remoteReadmeFile)
 	if err != nil {
 		t.Errorf("error uploading %s to %s: %s", readmeFile, remoteReadmeFile, err)
 	}
@@ -113,9 +104,6 @@ func Test0ByteUpload(t *testing.T) {
 	// test uploading
 	c, err := newUncachedClient()
 	if err != nil {
-		t.Fatal(err)
-	}
-	if err := c.FetchNodeTree(); err != nil {
 		t.Fatal(err)
 	}
 	if _, err := c.Upload(remoteZeroByteFile, false, in); err != constants.ErrNoContentsToUpload {

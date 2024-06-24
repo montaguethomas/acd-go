@@ -21,6 +21,8 @@ func (nt *Tree) FindNode(path string) (*Node, error) {
 	if path == "" {
 		return nt.Node, nil
 	}
+	// lowercase path
+	path = strings.ToLower(path)
 
 	// initialize our search from the root node
 	node := nt.Node
@@ -28,17 +30,9 @@ func (nt *Tree) FindNode(path string) (*Node, error) {
 	// iterate over the path parts until we find the path (or not).
 	parts := strings.Split(path, "/")
 	for _, part := range parts {
-		var found bool
-		for _, n := range node.Nodes {
-			// does node.name matches our query?
-			if strings.ToLower(n.Name) == strings.ToLower(part) {
-				node = n
-				found = true
-				break
-			}
-		}
-
-		if !found {
+		var ok bool
+		node, ok = node.Nodes[part]
+		if !ok {
 			log.Errorf("%s: %s", constants.ErrNodeNotFound, path)
 			return nil, constants.ErrNodeNotFound
 		}
@@ -47,13 +41,12 @@ func (nt *Tree) FindNode(path string) (*Node, error) {
 	return node, nil
 }
 
-// FindByID returns the node identified by the ID.
-func (nt *Tree) FindByID(id string) (*Node, error) {
-	n, found := nt.nodeMap[id]
-	if !found {
-		log.Errorf("%s: ID %q", constants.ErrNodeNotFound, id)
+// FindById returns the node identified by the Id.
+func (nt *Tree) FindById(id string) (*Node, error) {
+	n, ok := nt.nodeIdMap[id]
+	if !ok {
+		log.Errorf("%s: Id %q", constants.ErrNodeNotFound, id)
 		return nil, constants.ErrNodeNotFound
 	}
-
 	return n, nil
 }

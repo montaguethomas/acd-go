@@ -2,8 +2,8 @@ package node
 
 import (
 	"encoding/json"
-	"net/http"
-	"slices"
+	"strings"
+	"sync"
 	"time"
 
 	"github.com/montaguethomas/acd-go/constants"
@@ -28,7 +28,7 @@ const (
 
 type (
 	// Nodes is a slice of nodes
-	Nodes []*Node
+	Nodes map[string]*Node
 
 	// ContentProperties hold the properties of the node.
 	ContentProperties struct {
@@ -44,6 +44,9 @@ type (
 		ContentType string `json:"contentType,omitempty"`
 		// date extracted from media types (images and videos) (ISO8601 date with timezone offset)
 		ContentDate time.Time `json:"contentDate,omitempty"`
+
+		//Image
+		//Video
 	}
 
 	Property map[string]string
@@ -54,8 +57,10 @@ type (
 	// https://developer.amazon.com/docs/amazon-drive/ad-restful-api-nodes.html
 	Node struct {
 		// Coming from Amazon
+		// etag of node
+		ETagResponse string `json:"eTagResponse,omitempty"`
 		// unique identifier of a file
-		ID string `json:"id,omitempty"`
+		Id string `json:"id,omitempty"`
 		// user friendly name of a file
 		Name string `json:"name,omitempty"`
 		// literal string "FILE", "FOLDER", "ASSET"
@@ -76,15 +81,11 @@ type (
 		Parents []string `json:"Parents,omitempty"`
 		// either "AVAILABLE", "TRASH", "PURGED"
 		Status NodeStatus `json:"status,omitempty"`
-		// map of application properties {"owner_app_id1" : {"key":"value", "key2","value2"}, "owner_app_id2" : {"foo":"bar"} }
+		// Extra properties which client wants to add to a node. Properties will be grouped together by the owner application Id
+		// which created them. By default, all properties will be restricted to its owner and no one else can read/write/delete
+		// them. As of now, only 10 properties can be stored by each owner. This is how properties would look inside a Node:
+		// {"owner_app_id1" : {"key":"value", "key2","value2"}, "owner_app_id2" : {"foo":"bar"}, "owner_app_id3": { "key":"value", "key":"value", ...} }
 		Properties map[string]Property `json:"properties,omitempty"`
-
-		// Files
-		// Pre authenticated link enables viewing the file content for limited times only; has to be specifically requested
-		TempLink          string            `json:"tempLink,omitempty"`
-		ContentProperties ContentProperties `json:"contentProperties,omitempty"`
-
-		// Folders
 		// indicates whether the file is restricted to that app only or accessible to all the applications
 		Restricted bool `json:"restricted,omitempty"`
 		// indicates whether the folder is a root folder or not
@@ -92,12 +93,19 @@ type (
 		// set if node is shared
 		IsShared bool `json:"isShared,omitempty"`
 
+		// Files Only
+		// Pre authenticated link enables viewing the file content for limited times only; has to be specifically requested
+		TempLink          string            `json:"tempLink,omitempty"`
+		ContentProperties ContentProperties `json:"contentProperties,omitempty"`
+
+		// Internal - exported in order to support gob encode/decode
+		Nodes Nodes `json:"nodes,omitempty"`
+
 		// Internal
-		Nodes  Nodes `json:"nodes,omitempty"`
-		Root   bool  `json:"root,omitempty"`
-		client client
+		mutex sync.Mutex
 	}
 
+	// Request Body for creating new nodes (files, folders)
 	newNode struct {
 		Name       string              `json:"name,omitempty"`
 		Kind       string              `json:"kind,omitempty"`
@@ -105,15 +113,14 @@ type (
 		Properties map[string]Property `json:"properties"`
 		Parents    []string            `json:"parents"`
 	}
-
-	client interface {
-		GetMetadataURL(string) string
-		GetContentURL(string) string
-		Do(*http.Request) (*http.Response, error)
-		CheckResponse(*http.Response) error
-		GetNodeTree() *Tree
-	}
 )
+
+func (n *Node) Lock() {
+	n.mutex.Lock()
+}
+func (n *Node) Unlock() {
+	n.mutex.Unlock()
+}
 
 // Size returns the size of the node.
 func (n *Node) Size() int64 {
@@ -140,27 +147,30 @@ func (n *Node) IsAsset() bool {
 	return n.Kind == KindAsset
 }
 
-// Available returns true if the node is available
-func (n *Node) Available() bool {
+// IsAvailable returns true if the node is available
+func (n *Node) IsAvailable() bool {
 	return n.Status == StatusAvailable
 }
 
-// AddChild add a new child for the node
-func (n *Node) AddChild(child *Node) {
+// addChild add a new child for the node
+func (n *Node) addChild(child *Node) {
 	log.Debugf("adding %s under %s", child.Name, n.Name)
-	n.Nodes = append(n.Nodes, child)
-	child.client = n.client
+	n.Lock()
+	if n.Nodes == nil {
+		n.Nodes = make(Nodes)
+	}
+	n.Nodes[strings.ToLower(child.Name)] = child
+	n.Unlock()
 }
 
-// RemoveChild remove a new child for the node
-func (n *Node) RemoveChild(child *Node) {
-	found := false
-	i := slices.Index(n.Nodes, child)
-	if i >= 0 {
-		found = true
-		n.Nodes = slices.Delete(n.Nodes, i, i+1)
+// removeChild remove a new child for the node
+func (n *Node) removeChild(child *Node) {
+	log.Debugf("removing %s from %s", child.Name, n.Name)
+	if n.Nodes != nil {
+		n.Lock()
+		delete(n.Nodes, strings.ToLower(child.Name))
+		n.Unlock()
 	}
-	log.Debugf("removed %s from %s: %t", child.Name, n.Name, found)
 }
 
 func (n *Node) update(newNode *Node) error {
@@ -172,6 +182,8 @@ func (n *Node) update(newNode *Node) error {
 	}
 
 	// decode it back to n
+	n.Lock()
+	defer n.Unlock()
 	if err := json.Unmarshal(v, n); err != nil {
 		log.Errorf("error decoding the node from JSON: %s", err)
 		return constants.ErrJSONDecoding

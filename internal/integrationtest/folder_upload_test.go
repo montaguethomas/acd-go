@@ -61,9 +61,6 @@ func testUploadFolder(t *testing.T, localFolder string, recursive, overwrite boo
 	if err != nil {
 		t.Fatal(err)
 	}
-	if err := c.FetchNodeTree(); err != nil {
-		t.Fatal(err)
-	}
 	if err := c.UploadFolder(localFolder, remoteFolder, recursive, overwrite); err != nil {
 		t.Errorf("error uploading %s to %s: %s", localFolder, remoteFolder, err)
 	}
@@ -87,9 +84,6 @@ func testUploadFolder(t *testing.T, localFolder string, recursive, overwrite boo
 	c.Close()
 	c, err = newCachedClient(false)
 	if err != nil {
-		t.Fatal(err)
-	}
-	if err := c.FetchNodeTree(); err != nil {
 		t.Fatal(err)
 	}
 	for _, file := range files {

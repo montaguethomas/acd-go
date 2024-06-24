@@ -34,9 +34,7 @@ type Config struct {
 
 // Client provides a client for Amazon Cloud Drive.
 type Client struct {
-	// nodeTree is the tree of nodes as stored on the drive. This tree should
-	// be fetched using (*Client).FetchNodeTree() as soon the client is
-	// created.
+	// nodeTree is the tree of nodes as stored on the drive.
 	nodeTree *node.Tree
 
 	config     *Config
@@ -57,7 +55,7 @@ type EndpointResponse struct {
 }
 
 // New returns a new Amazon Cloud Drive "acd" Client
-func New(config *Config) (*Client, error) {
+func New(config *Config, chunkSize int, syncInterval time.Duration) (*Client, error) {
 	c := &Client{
 		config:    config,
 		cacheFile: config.CacheFile,
@@ -68,9 +66,11 @@ func New(config *Config) (*Client, error) {
 	if err := c.setEndpoints(); err != nil {
 		return nil, err
 	}
-	if err := c.FetchNodeTree(); err != nil {
+	nt, err := node.NewTree(c, c.cacheFile, chunkSize, syncInterval)
+	if err != nil {
 		return nil, err
 	}
+	c.nodeTree = nt
 	return c, nil
 }
 
