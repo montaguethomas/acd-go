@@ -13,11 +13,12 @@ import (
 )
 
 // CreateFolder creates the named folder under the node
-func (nt *Tree) CreateFolder(n *Node, name string) (*Node, error) {
+func (nt *Tree) CreateFolder(n *Node, name string, labels []string) (*Node, error) {
 	cn := &newNode{
 		Name:    name,
 		Kind:    "FOLDER",
 		Parents: []string{n.Id},
+		Labels:  labels,
 	}
 	jsonBytes, err := json.Marshal(cn)
 	if err != nil {
