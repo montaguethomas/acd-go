@@ -77,15 +77,7 @@ func NewTree(c client, cacheFile string, chunkSize int, syncInterval time.Durati
 			case <-ticker.C:
 				log.Debug("Background sync starting.")
 				if err := nt.Sync(); err != nil {
-					switch err {
-					case constants.ErrMustFetchFresh:
-						log.Info("Background sync must refresh the node tree.")
-						if err := nt.fetchFresh(); err != nil {
-							log.Errorf("Background sync failed to fetch fresh: %s", err)
-						}
-					default:
-						log.Errorf("Background sync error: %s", err)
-					}
+					log.Errorf("Background sync error: %s", err)
 				}
 				log.Debug("Background sync completed.")
 			}
