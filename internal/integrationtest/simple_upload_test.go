@@ -8,6 +8,7 @@ import (
 	"testing"
 
 	"github.com/montaguethomas/acd-go/constants"
+	"github.com/montaguethomas/acd-go/node"
 )
 
 func TestSimpleUpload(t *testing.T) {
@@ -38,7 +39,7 @@ func TestSimpleUpload(t *testing.T) {
 		t.Fatal(err)
 	}
 	in.Seek(0, 0)
-	if _, err := c.Upload(remoteReadmeFile, false, in); err != nil {
+	if _, err := c.Upload(remoteReadmeFile, false, []string{}, map[string]node.Property{}, in); err != nil {
 		t.Errorf("error uploading %s to %s: %s", readmeFile, remoteReadmeFile, err)
 	}
 
@@ -106,7 +107,7 @@ func Test0ByteUpload(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if _, err := c.Upload(remoteZeroByteFile, false, in); err != constants.ErrNoContentsToUpload {
+	if _, err := c.Upload(remoteZeroByteFile, false, []string{}, map[string]node.Property{}, in); err != constants.ErrNoContentsToUpload {
 		t.Errorf("uploading a 0-byte file: want %s got %s", constants.ErrNoContentsToUpload, err)
 	}
 }

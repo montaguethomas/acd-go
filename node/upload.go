@@ -13,12 +13,13 @@ import (
 )
 
 // CreateFolder creates the named folder under the node
-func (nt *Tree) CreateFolder(n *Node, name string, labels []string) (*Node, error) {
+func (nt *Tree) CreateFolder(n *Node, name string, labels []string, properties map[string]Property) (*Node, error) {
 	cn := &newNode{
-		Name:    name,
-		Kind:    "FOLDER",
-		Parents: []string{n.Id},
-		Labels:  labels,
+		Name:       name,
+		Kind:       "FOLDER",
+		Labels:     labels,
+		Parents:    []string{n.Id},
+		Properties: properties,
 	}
 	jsonBytes, err := json.Marshal(cn)
 	if err != nil {
@@ -49,17 +50,21 @@ func (nt *Tree) CreateFolder(n *Node, name string, labels []string) (*Node, erro
 		return nil, constants.ErrJSONDecodingResponseBody
 	}
 
+	nt.Lock()
 	nt.nodeIdMap[node.Id] = node
+	nt.Unlock()
 	n.addChild(node)
 	return node, nil
 }
 
 // Upload writes contents of r as name inside the current node.
-func (nt *Tree) Upload(n *Node, name string, r io.Reader) (*Node, error) {
+func (nt *Tree) Upload(parent *Node, name string, labels []string, properties map[string]Property, r io.Reader) (*Node, error) {
 	metadata := &newNode{
-		Name:    name,
-		Kind:    "FILE",
-		Parents: []string{n.Id},
+		Name:       name,
+		Kind:       "FILE",
+		Labels:     labels,
+		Parents:    []string{parent.Id},
+		Properties: properties,
 	}
 	metadataJSON, err := json.Marshal(metadata)
 	if err != nil {
@@ -68,25 +73,68 @@ func (nt *Tree) Upload(n *Node, name string, r io.Reader) (*Node, error) {
 	}
 
 	postURL := nt.client.GetContentURL("nodes?suppress=deduplication")
-	node, err := nt.upload(n, postURL, "POST", string(metadataJSON), name, r)
+	node, err := nt.upload(parent, postURL, "POST", string(metadataJSON), name, r)
 	if err != nil {
 		return nil, err
 	}
 
+	nt.Lock()
 	nt.nodeIdMap[node.Id] = node
-	n.addChild(node)
+	nt.Unlock()
+	parent.addChild(node)
 	return node, nil
 }
 
+// Patch updates metadata for the provided node.
+func (nt *Tree) Patch(n *Node, labels []string, properties map[string]Property) error {
+	metadata := &newNode{
+		Labels:     labels,
+		Properties: properties,
+	}
+	metadataJSON, err := json.Marshal(metadata)
+	if err != nil {
+		log.Errorf("%s: %s", constants.ErrJSONEncoding, err)
+		return constants.ErrJSONEncoding
+	}
+
+	patchURL := nt.client.GetContentURL(fmt.Sprintf("nodes/%s", n.Id))
+	req, err := http.NewRequest("PATCH", patchURL, bytes.NewBuffer(metadataJSON))
+	if err != nil {
+		log.Errorf("%s: %s", constants.ErrCreatingHTTPRequest, err)
+		return constants.ErrCreatingHTTPRequest
+	}
+	req.Header.Set("Content-Type", "application/json")
+	res, err := nt.client.Do(req)
+	if err != nil {
+		log.Errorf("%s: %s", constants.ErrDoingHTTPRequest, err)
+		return constants.ErrDoingHTTPRequest
+	}
+	if err := nt.client.CheckResponse(res); err != nil {
+		return err
+	}
+
+	defer res.Body.Close()
+	var newNode *Node
+	if err := json.NewDecoder(res.Body).Decode(&newNode); err != nil {
+		log.Errorf("%s: %s", constants.ErrJSONDecodingResponseBody, err)
+		return constants.ErrJSONDecodingResponseBody
+	}
+
+	return n.update(newNode)
+}
+
 // Overwrite writes contents of r as name inside the current node.
-func (nt *Tree) Overwrite(n *Node, r io.Reader) error {
+func (nt *Tree) Overwrite(n *Node, labels []string, properties map[string]Property, r io.Reader) error {
 	putURL := nt.client.GetContentURL(fmt.Sprintf("nodes/%s/content", n.Id))
 	node, err := nt.upload(n, putURL, "PUT", "", n.Name, r)
 	if err != nil {
 		return err
 	}
 
-	return n.update(node)
+	if err := n.update(node); err != nil {
+		return err
+	}
+	return nt.Patch(n, labels, properties)
 }
 
 func (nt *Tree) upload(n *Node, url, method, metadataJSON, name string, r io.Reader) (*Node, error) {

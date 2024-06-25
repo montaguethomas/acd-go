@@ -9,6 +9,8 @@ import (
 	"os"
 	"path"
 	"testing"
+
+	"github.com/montaguethomas/acd-go/node"
 )
 
 func TestSimpleFolderUpload(t *testing.T) {
@@ -61,7 +63,7 @@ func testUploadFolder(t *testing.T, localFolder string, recursive, overwrite boo
 	if err != nil {
 		t.Fatal(err)
 	}
-	if err := c.UploadFolder(localFolder, remoteFolder, recursive, overwrite); err != nil {
+	if err := c.UploadFolder(localFolder, remoteFolder, recursive, overwrite, []string{}, map[string]node.Property{}); err != nil {
 		t.Errorf("error uploading %s to %s: %s", localFolder, remoteFolder, err)
 	}
 

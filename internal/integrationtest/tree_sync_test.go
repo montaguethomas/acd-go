@@ -6,6 +6,8 @@ import (
 	"io"
 	"os"
 	"testing"
+
+	"github.com/montaguethomas/acd-go/node"
 )
 
 func TestTreeSync(t *testing.T) {
@@ -39,7 +41,7 @@ func TestTreeSync(t *testing.T) {
 	io.Copy(inhash, in)
 	inmd5 := hex.EncodeToString(inhash.Sum(nil))
 	in.Seek(0, 0)
-	if _, err := c1.Upload(remoteReadmeFile, false, in); err != nil {
+	if _, err := c1.Upload(remoteReadmeFile, false, []string{}, map[string]node.Property{}, in); err != nil {
 		t.Errorf("error uploading %s to %s: %s", readmeFile, remoteReadmeFile, err)
 	}
 

@@ -110,8 +110,8 @@ type (
 		Name       string              `json:"name,omitempty"`
 		Kind       string              `json:"kind,omitempty"`
 		Labels     []string            `json:"labels,omitempty"`
-		Properties map[string]Property `json:"properties"`
 		Parents    []string            `json:"parents"`
+		Properties map[string]Property `json:"properties"`
 	}
 )
 
