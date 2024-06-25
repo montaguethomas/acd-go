@@ -152,6 +152,18 @@ func (n *Node) IsAvailable() bool {
 	return n.Status == StatusAvailable
 }
 
+func (n *Node) GetProperty(key string) (string, bool) {
+	props, ok := n.Properties[constants.CloudDriveWebOwnerName]
+	if !ok {
+		return "", false
+	}
+	value, ok := props[key]
+	if !ok {
+		return "", false
+	}
+	return value, true
+}
+
 // addChild add a new child for the node
 func (n *Node) addChild(child *Node) {
 	log.Debugf("adding %s under %s", child.Name, n.Name)
