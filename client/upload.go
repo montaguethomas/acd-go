@@ -16,7 +16,7 @@ import (
 
 // Upload uploads io.Reader to the path defined by the filename. It will create
 // any non-existing folders.
-func (c *Client) Upload(filename string, overwrite bool, labels []string, properties map[string]node.Property, r io.Reader) (*node.Node, error) {
+func (c *Client) Upload(filename string, overwrite bool, labels []string, properties node.Property, r io.Reader) (*node.Node, error) {
 	var (
 		err        error
 		logLevel   = log.GetLevel()
@@ -57,7 +57,7 @@ func (c *Client) Upload(filename string, overwrite bool, labels []string, proper
 // If recursive is true, it will recurse through the entire filetree under
 // localPath.  If overwrite is false and an existing file with the same md5 was
 // found, an error will be returned.
-func (c *Client) UploadFolder(localPath, remotePath string, recursive, overwrite bool, labels []string, properties map[string]node.Property) error {
+func (c *Client) UploadFolder(localPath, remotePath string, recursive, overwrite bool, labels []string, properties node.Property) error {
 	log.Debugf("uploading %q to %q", localPath, remotePath)
 	if err := filepath.Walk(localPath, c.uploadFolderFunc(localPath, remotePath, recursive, overwrite, labels, properties)); err != nil {
 		return err
@@ -66,7 +66,7 @@ func (c *Client) UploadFolder(localPath, remotePath string, recursive, overwrite
 	return nil
 }
 
-func (c *Client) uploadFolderFunc(localPath, remoteBasePath string, recursive, overwrite bool, labels []string, properties map[string]node.Property) filepath.WalkFunc {
+func (c *Client) uploadFolderFunc(localPath, remoteBasePath string, recursive, overwrite bool, labels []string, properties node.Property) filepath.WalkFunc {
 	return func(fpath string, info os.FileInfo, err error) error {
 		var (
 			logLevel   = log.GetLevel()

@@ -13,13 +13,15 @@ import (
 )
 
 // CreateFolder creates the named folder under the node
-func (nt *Tree) CreateFolder(n *Node, name string, labels []string, properties map[string]Property) (*Node, error) {
+func (nt *Tree) CreateFolder(n *Node, name string, labels []string, properties Property) (*Node, error) {
 	cn := &newNode{
-		Name:       name,
-		Kind:       "FOLDER",
-		Labels:     labels,
-		Parents:    []string{n.Id},
-		Properties: properties,
+		Name:    name,
+		Kind:    "FOLDER",
+		Labels:  labels,
+		Parents: []string{n.Id},
+		Properties: map[string]Property{
+			constants.CloudDriveWebOwnerName: properties,
+		},
 	}
 	jsonBytes, err := json.Marshal(cn)
 	if err != nil {
@@ -58,13 +60,15 @@ func (nt *Tree) CreateFolder(n *Node, name string, labels []string, properties m
 }
 
 // Upload writes contents of r as name inside the current node.
-func (nt *Tree) Upload(parent *Node, name string, labels []string, properties map[string]Property, r io.Reader) (*Node, error) {
+func (nt *Tree) Upload(parent *Node, name string, labels []string, properties Property, r io.Reader) (*Node, error) {
 	metadata := &newNode{
-		Name:       name,
-		Kind:       "FILE",
-		Labels:     labels,
-		Parents:    []string{parent.Id},
-		Properties: properties,
+		Name:    name,
+		Kind:    "FILE",
+		Labels:  labels,
+		Parents: []string{parent.Id},
+		Properties: map[string]Property{
+			constants.CloudDriveWebOwnerName: properties,
+		},
 	}
 	metadataJSON, err := json.Marshal(metadata)
 	if err != nil {
@@ -86,10 +90,12 @@ func (nt *Tree) Upload(parent *Node, name string, labels []string, properties ma
 }
 
 // Patch updates metadata for the provided node.
-func (nt *Tree) Patch(n *Node, labels []string, properties map[string]Property) error {
+func (nt *Tree) Patch(n *Node, labels []string, properties Property) error {
 	metadata := &newNode{
-		Labels:     labels,
-		Properties: properties,
+		Labels: labels,
+		Properties: map[string]Property{
+			constants.CloudDriveWebOwnerName: properties,
+		},
 	}
 	metadataJSON, err := json.Marshal(metadata)
 	if err != nil {
@@ -124,7 +130,7 @@ func (nt *Tree) Patch(n *Node, labels []string, properties map[string]Property) 
 }
 
 // Overwrite writes contents of r as name inside the current node.
-func (nt *Tree) Overwrite(n *Node, labels []string, properties map[string]Property, r io.Reader) error {
+func (nt *Tree) Overwrite(n *Node, labels []string, properties Property, r io.Reader) error {
 	putURL := nt.client.GetContentURL(fmt.Sprintf("nodes/%s/content", n.Id))
 	node, err := nt.upload(n, putURL, "PUT", "", n.Name, r)
 	if err != nil {
