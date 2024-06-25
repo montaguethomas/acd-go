@@ -19,7 +19,7 @@ func (c *Client) GetContentURL(path string) string {
 }
 
 func (c *Client) setEndpoints() error {
-	req, err := http.NewRequest("GET", EndpointURL, nil)
+	req, err := http.NewRequest("GET", constants.EndpointURL, nil)
 	if err != nil {
 		log.Errorf("%s: %s", constants.ErrCreatingHTTPRequest, err)
 		return constants.ErrCreatingHTTPRequest

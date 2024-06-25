@@ -11,8 +11,6 @@ import (
 	"github.com/montaguethomas/acd-go/node"
 )
 
-const EndpointURL = "https://drive.amazonaws.com/drive/v1/account/endpoint"
-
 // Config represents the clients configuration.
 type Config struct {
 	// Cookies contains all cookies to pass on all requests made.
