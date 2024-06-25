@@ -107,11 +107,11 @@ type (
 
 	// Request Body for creating new nodes (files, folders)
 	newNode struct {
-		Name       string              `json:"name,omitempty"`
-		Kind       string              `json:"kind,omitempty"`
+		Name       string              `json:"name"`
+		Kind       string              `json:"kind"`
 		Labels     []string            `json:"labels,omitempty"`
-		Parents    []string            `json:"parents"`
-		Properties map[string]Property `json:"properties"`
+		Parents    []string            `json:"parents,omitempty"`
+		Properties map[string]Property `json:"properties,omitempty"`
 	}
 )
 
