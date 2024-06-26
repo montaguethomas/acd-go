@@ -98,6 +98,7 @@ func (nt *Tree) Sync() error {
 			break
 		}
 
+		log.Debugf("syncing checkpoint %s", cr.Checkpoint)
 		if err := nt.updateNodes(cr.Nodes); err != nil {
 			return err
 		}
