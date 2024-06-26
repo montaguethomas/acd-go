@@ -188,7 +188,7 @@ func (nt *Tree) MkDirAll(path string) (*Node, error) {
 			return nil, err
 		}
 		if err == constants.ErrNodeNotFound {
-			nextNode, err = nt.CreateFolder(folderNode, part, []string{}, Property{})
+			nextNode, err = nt.CreateFolder(folderNode, part, []string{}, NewProperty())
 			if err != nil {
 				return nil, err
 			}

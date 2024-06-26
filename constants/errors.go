@@ -92,6 +92,12 @@ var (
 	// ErrCannotCreateANodeUnderAFile is returned if you attempt to create a
 	// folder/file under an existing file.
 	ErrCannotCreateANodeUnderAFile = errors.New("cannot create a node under a file")
+	// ErrNodePropertyInvalidKey is returned when a node property key is invalid.
+	ErrNodePropertyInvalidKey = errors.New("node property key is invalid")
+	// ErrNodePropertyMaxKeys is returned when a node property cannot add anymore keys.
+	ErrNodePropertyMaxKeys = errors.New("node property has reached maximum allowed keys")
+	// ErrNodePropertyInvalidValue is returned when a node property value is invalid.
+	ErrNodePropertyInvalidValue = errors.New("node property value is invalid")
 
 	// URL errors
 

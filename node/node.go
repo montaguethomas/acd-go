@@ -1,13 +1,28 @@
 package node
 
 import (
+	"bytes"
+	"encoding/gob"
 	"encoding/json"
+	"maps"
+	"regexp"
 	"strings"
 	"sync"
 	"time"
 
 	"github.com/montaguethomas/acd-go/constants"
 	"github.com/montaguethomas/acd-go/log"
+)
+
+const (
+	// NodePropertyKeysMaxCount is the maximum allowed node property keys
+	NodePropertyKeysMaxCount = 10
+	// NodePropertyKeyMaxSize is the maximum size of a node property key
+	NodePropertyKeyMaxSize = 50
+	// NodePropertyKeyCheckRegex is the matching pattern for node property keys
+	NodePropertyKeyCheckRegex = "^[a-zA-Z0-9_]*$"
+	// NodePropertyValueMaxSize is the maximum size of a node property key's value
+	NodePropertyValueMaxSize = 500
 )
 
 type NodeKind string
@@ -49,8 +64,6 @@ type (
 		//Video
 	}
 
-	Property map[string]string
-
 	// Node represents a digital asset on the Amazon Cloud Drive, including files
 	// and folders, in a parent-child relationship. A node contains only metadata
 	// (e.g. folder) or it contains metadata and content (e.g. file).
@@ -85,7 +98,7 @@ type (
 		// which created them. By default, all properties will be restricted to its owner and no one else can read/write/delete
 		// them. As of now, only 10 properties can be stored by each owner. This is how properties would look inside a Node:
 		// {"owner_app_id1" : {"key":"value", "key2","value2"}, "owner_app_id2" : {"foo":"bar"}, "owner_app_id3": { "key":"value", "key":"value", ...} }
-		Properties map[string]Property `json:"properties,omitempty"`
+		Properties map[string]*nodeProperty `json:"properties,omitempty"`
 		// indicates whether the file is restricted to that app only or accessible to all the applications
 		Restricted bool `json:"restricted,omitempty"`
 		// indicates whether the folder is a root folder or not
@@ -114,6 +127,140 @@ type (
 		Properties map[string]Property `json:"properties,omitempty"`
 	}
 )
+
+func New() *Node {
+	node := &Node{}
+	node.SetOwnerProperties(NewProperty())
+	return node
+}
+
+func NewProperty() Property {
+	p := &nodeProperty{}
+	p.props = make(map[string]string, NodePropertyKeysMaxCount)
+	return p
+}
+
+// Property implements the Node Properties field per the API.
+// https://developer.amazon.com/docs/amazon-drive/ad-restful-api-nodes.html#properties-1
+type Property interface {
+	Clone() Property
+	Get(key string) (string, bool)
+	GetAll() map[string]string
+	Has(key string) bool
+	Remove(key string)
+	RemoveAll(keys []string)
+	Set(key, value string) error
+	SetAll(props map[string]string) []error
+	Size() int
+	GobEncode() ([]byte, error)
+	GobDecode(data []byte) error
+	MarshalJSON() ([]byte, error)
+	UnmarshalJSON(data []byte) error
+}
+
+type nodeProperty struct {
+	props map[string]string
+}
+
+// Clone returns a shallow copy of the property.
+func (p *nodeProperty) Clone() Property {
+	return &nodeProperty{
+		props: maps.Clone(p.props),
+	}
+}
+
+// Get returns the value of the property key.
+func (p *nodeProperty) Get(key string) (string, bool) {
+	v, ok := p.props[key]
+	return v, ok
+}
+
+// GetAll returns all property key/value pairs.
+func (p *nodeProperty) GetAll() map[string]string {
+	return maps.Clone(p.props)
+}
+
+// Has checks if a property key is set.
+func (p *nodeProperty) Has(key string) bool {
+	_, ok := p.props[key]
+	return ok
+}
+
+// Remove will remove the property key.
+func (p *nodeProperty) Remove(key string) {
+	delete(p.props, key)
+}
+
+// RemoveAll will remove all the property keys it is provided.
+func (p *nodeProperty) RemoveAll(keys []string) {
+	for _, key := range keys {
+		p.Remove(key)
+	}
+}
+
+// Set will add/update the property key/value.
+func (p *nodeProperty) Set(key, value string) error {
+	keyCheck, err := regexp.MatchString(NodePropertyKeyCheckRegex, key)
+	if err != nil {
+		return err
+	}
+	if !keyCheck || len(key) > NodePropertyKeyMaxSize {
+		return constants.ErrNodePropertyInvalidKey
+	}
+	if !p.Has(key) && p.Size() == NodePropertyKeysMaxCount {
+		return constants.ErrNodePropertyMaxKeys
+	}
+	if len(value) > NodePropertyValueMaxSize {
+		return constants.ErrNodePropertyInvalidValue
+	}
+	if p.props == nil {
+		p.props = map[string]string{}
+	}
+	p.props[key] = value
+	return nil
+}
+
+// SetAll will add/update all the property key/value pairs it is provided.
+func (p *nodeProperty) SetAll(props map[string]string) []error {
+	errors := []error{}
+	for key, value := range props {
+		errors = append(errors, p.Set(key, value))
+	}
+	return errors
+}
+
+// Size returns the number of property keys set.
+func (p *nodeProperty) Size() int {
+	return len(p.props)
+}
+
+// GobEncode implements the gob.GobEncoder interface.
+func (p *nodeProperty) GobEncode() ([]byte, error) {
+	buf := bytes.NewBuffer([]byte{})
+	if err := gob.NewEncoder(buf).Encode(p.props); err != nil {
+		return []byte{}, err
+	}
+	return buf.Bytes(), nil
+}
+
+// GobDecode implements the gob.GobDecoder interface.
+func (p *nodeProperty) GobDecode(data []byte) error {
+	buf := bytes.NewBuffer(data)
+	return gob.NewDecoder(buf).Decode(&p.props)
+}
+
+// MarshalJSON returns json string of the Property
+func (p *nodeProperty) MarshalJSON() ([]byte, error) {
+	return json.Marshal(p.props)
+}
+
+// UnmarshalJSON tries to populate the Property from the json data
+func (p *nodeProperty) UnmarshalJSON(data []byte) error {
+	if err := json.Unmarshal(data, &p.props); err != nil {
+		return err
+	}
+	return nil
+}
 
 func (n *Node) Lock() {
 	n.mutex.Lock()
@@ -152,16 +299,28 @@ func (n *Node) IsAvailable() bool {
 	return n.Status == StatusAvailable
 }
 
-func (n *Node) GetProperty(key string) (string, bool) {
+func (n *Node) GetOwnerProperties() (Property, bool) {
+	props, ok := n.Properties[constants.CloudDriveWebOwnerName]
+	return props, ok
+}
+
+func (n *Node) GetOwnerProperty(key string) (string, bool) {
 	props, ok := n.Properties[constants.CloudDriveWebOwnerName]
 	if !ok {
 		return "", false
 	}
-	value, ok := props[key]
+	value, ok := props.Get(key)
 	if !ok {
 		return "", false
 	}
 	return value, true
+}
+
+func (n *Node) SetOwnerProperties(prop Property) {
+	if n.Properties == nil {
+		n.Properties = map[string]*nodeProperty{}
+	}
+	n.Properties[constants.CloudDriveWebOwnerName] = prop.(*nodeProperty)
 }
 
 // addChild add a new child for the node
