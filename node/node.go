@@ -224,7 +224,10 @@ func (p *nodeProperty) Set(key, value string) error {
 func (p *nodeProperty) SetAll(props map[string]string) []error {
 	errors := []error{}
 	for key, value := range props {
-		errors = append(errors, p.Set(key, value))
+		err := p.Set(key, value)
+		if err != nil {
+			errors = append(errors, err)
+		}
 	}
 	return errors
 }
