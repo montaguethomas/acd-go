@@ -126,6 +126,13 @@ type (
 		Parents    []string            `json:"parents,omitempty"`
 		Properties map[string]Property `json:"properties,omitempty"`
 	}
+
+	// Request Body for patching nodes (files, folders)
+	patchNode struct {
+		Name       string              `json:"name,omitempty"`
+		Labels     []string            `json:"labels,omitempty"`
+		Properties map[string]Property `json:"properties,omitempty"`
+	}
 )
 
 func New() *Node {

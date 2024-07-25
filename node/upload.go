@@ -91,7 +91,7 @@ func (nt *Tree) Upload(parent *Node, name string, labels []string, properties Pr
 
 // Patch updates metadata for the provided node.
 func (nt *Tree) Patch(n *Node, labels []string, properties Property) error {
-	metadata := &newNode{
+	metadata := &patchNode{
 		Labels: labels,
 		Properties: map[string]Property{
 			constants.CloudDriveWebOwnerName: properties,
@@ -103,7 +103,7 @@ func (nt *Tree) Patch(n *Node, labels []string, properties Property) error {
 		return constants.ErrJSONEncoding
 	}
 
-	patchURL := nt.client.GetContentURL(fmt.Sprintf("nodes/%s", n.Id))
+	patchURL := nt.client.GetMetadataURL(fmt.Sprintf("nodes/%s", n.Id))
 	req, err := http.NewRequest("PATCH", patchURL, bytes.NewBuffer(metadataJSON))
 	if err != nil {
 		log.Errorf("%s: %s", constants.ErrCreatingHTTPRequest, err)
