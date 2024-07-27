@@ -22,11 +22,18 @@ type Config struct {
 	// run. It is gob-encoded node.Node.
 	CacheFile string `json:"cacheFile"`
 
+	// SyncChunkSize is the number of nodes to be returned within each Changes object in the response stream.
+	SyncChunkSize int `json:"syncChunkSize"`
+
+	// SyncInterval is how often to sync the Node Tree cache
+	SyncInterval time.Duration `json:"syncInterval"`
+
 	// Timeout configures the HTTP Client with a timeout after which the client
 	// will cancel the request and return. A timeout of 0 (the default) means
 	// no timeout. See http://godoc.org/net/http#Client for more information.
 	Timeout time.Duration `json:"timeout"`
 
+	// UserAgent is the value to use for the user agent header on all http requests
 	UserAgent string `json:"userAgent"`
 }
 
@@ -53,7 +60,17 @@ type EndpointResponse struct {
 }
 
 // New returns a new Amazon Cloud Drive "acd" Client
-func New(config *Config, chunkSize int, syncInterval time.Duration) (*Client, error) {
+func New(config *Config) (*Client, error) {
+	// Validate configs
+	if config.CacheFile == "" {
+		return nil, constants.ErrCacheFileConfigEmpty
+	}
+	if config.SyncChunkSize < 1 {
+		config.SyncChunkSize = 25
+	}
+	if config.SyncInterval < time.Second {
+		config.SyncInterval = 30 * time.Second
+	}
 	c := &Client{
 		config:    config,
 		cacheFile: config.CacheFile,
@@ -64,7 +81,7 @@ func New(config *Config, chunkSize int, syncInterval time.Duration) (*Client, er
 	if err := c.setEndpoints(); err != nil {
 		return nil, err
 	}
-	nt, err := node.NewTree(c, c.cacheFile, chunkSize, syncInterval)
+	nt, err := node.NewTree(c, c.cacheFile, config.SyncChunkSize, config.SyncInterval)
 	if err != nil {
 		return nil, err
 	}

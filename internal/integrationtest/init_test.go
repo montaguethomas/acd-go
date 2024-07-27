@@ -89,12 +89,12 @@ func newCachedClient(ncf bool) (*acd.Client, error) {
 		cacheFiles = append(cacheFiles, cacheFile)
 	}
 	config, _ := acd.LoadConfig(newConfigFile(cacheFile))
-	return acd.New(config, 50, time.Minute)
+	return acd.New(config)
 }
 
 func newUncachedClient() (*acd.Client, error) {
 	config, _ := acd.LoadConfig(newConfigFile(devNullCacheFile))
-	return acd.New(config, 50, time.Minute)
+	return acd.New(config)
 }
 
 func newConfigFile(cacheFile string) string {

@@ -85,6 +85,8 @@ var (
 	ErrNodeNotFound = errors.New("node not found")
 	// ErrCannotCreateRootNode is returned if you attempt to create the root node
 	ErrCannotCreateRootNode = errors.New("root node cannot be created")
+	// ErrCacheFileConfigEmpty is returned when a client config does not set the cacheFile
+	ErrCacheFileConfigEmpty = errors.New("cache file config must be set")
 	// ErrLoadingCache is returned when an error happens while loading from cacheFile
 	ErrLoadingCache = errors.New("error loading from the cache file")
 	// ErrMustFetchFresh is returned if the changes API requested a change.
