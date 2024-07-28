@@ -20,7 +20,7 @@ type apiGetTrashResponse struct {
 }
 
 type apiBulkPurgeRequest struct {
-	Recurse bool     `json:"recurse"`
+	Recurse string   `json:"recurse"`
 	NodeIds []string `json:"nodeIds"`
 }
 
@@ -95,7 +95,7 @@ func (c *Client) PurgeNodes(nodes []*node.Node) error {
 
 	// Build Request Body
 	request := &apiBulkPurgeRequest{
-		Recurse: true,
+		Recurse: "true",
 		NodeIds: nodeIds,
 	}
 	requestJsonBytes, err := json.Marshal(request)
