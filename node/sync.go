@@ -46,6 +46,7 @@ func (nt *Tree) Sync() error {
 	defer log.Debug("node.Tree Sync completed.")
 
 	// Build Request Body
+	log.Debugf("current nodeTree.checkpoint %s", nt.Checkpoint)
 	c := &apiChangesRequest{
 		Checkpoint: nt.Checkpoint,
 		ChunkSize:  nt.chunkSize,
