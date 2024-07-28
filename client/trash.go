@@ -21,7 +21,7 @@ type apiGetTrashResponse struct {
 
 type apiBulkPurgeRequest struct {
 	Recurse string   `json:"recurse"`
-	NodeIds []string `json:"nodeIds"`
+	NodeIds []string `json:"nodeIds"` // Member must have length less than or equal to 50
 }
 
 type apiBulkPurgeResponse struct {
@@ -82,6 +82,26 @@ func (c *Client) GetTrash() ([]*node.Node, error) {
 	return nodes, nil
 }
 
+// can be replaced with slices.Chunk() in go1.23
+func slicesChunk[T any](slice []T, n uint64) <-chan []T {
+	if n == 0 {
+		panic("n can`t be less than 1")
+	}
+	channel := make(chan []T, 1)
+	go func() {
+		defer close(channel)
+		for i := uint64(0); i < uint64(len(slice)); i += n {
+			// Clamp the last chunk to the slice bound as necessary.
+			end := min(n, uint64(len(slice[i:])))
+
+			// Set the capacity of each chunk so that appending to a chunk does
+			// not modify the original slice.
+			channel <- slice[i : i+end : i+end]
+		}
+	}()
+	return channel
+}
+
 // PurgeNodes will purge the provided nodes
 func (c *Client) PurgeNodes(nodes []*node.Node) error {
 	log.Debug("client.PurgeNodes starting.")
@@ -93,46 +113,53 @@ func (c *Client) PurgeNodes(nodes []*node.Node) error {
 		nodeIds = append(nodeIds, node.Id)
 	}
 
-	// Build Request Body
-	request := &apiBulkPurgeRequest{
-		Recurse: "true",
-		NodeIds: nodeIds,
-	}
-	requestJsonBytes, err := json.Marshal(request)
-	if err != nil {
-		log.Errorf("%s: %s", constants.ErrJSONEncoding, err)
-		return constants.ErrJSONEncoding
-	}
+	errorMaps := []map[string]int{}
+	for chunk := range slicesChunk(nodeIds, 50) {
+		// Build Request Body
+		request := &apiBulkPurgeRequest{
+			Recurse: "true",
+			NodeIds: chunk,
+		}
+		requestJsonBytes, err := json.Marshal(request)
+		if err != nil {
+			log.Errorf("%s: %s", constants.ErrJSONEncoding, err)
+			return constants.ErrJSONEncoding
+		}
 
-	// Build Request
-	req, err := http.NewRequest("POST", c.GetMetadataURL("bulk/nodes/purge"), bytes.NewBuffer(requestJsonBytes))
-	if err != nil {
-		log.Errorf("%s: %s", constants.ErrCreatingHTTPRequest, err)
-		return constants.ErrCreatingHTTPRequest
-	}
-	req.Header.Set("Content-Type", "application/json")
+		// Build Request
+		req, err := http.NewRequest("POST", c.GetMetadataURL("bulk/nodes/purge"), bytes.NewBuffer(requestJsonBytes))
+		if err != nil {
+			log.Errorf("%s: %s", constants.ErrCreatingHTTPRequest, err)
+			return constants.ErrCreatingHTTPRequest
+		}
+		req.Header.Set("Content-Type", "application/json")
 
-	// Make Request
-	res, err := c.Do(req)
-	if err != nil {
-		log.Errorf("%s: %s", constants.ErrDoingHTTPRequest, err)
-		return constants.ErrDoingHTTPRequest
-	}
-	if err := c.CheckResponse(res); err != nil {
-		return err
-	}
+		// Make Request
+		res, err := c.Do(req)
+		if err != nil {
+			log.Errorf("%s: %s", constants.ErrDoingHTTPRequest, err)
+			return constants.ErrDoingHTTPRequest
+		}
+		if err := c.CheckResponse(res); err != nil {
+			return err
+		}
 
-	// Handle Response
-	defer res.Body.Close()
-	response := apiBulkPurgeResponse{}
-	if err := json.NewDecoder(res.Body).Decode(&response); err != nil {
-		log.Errorf("%s: %s", constants.ErrJSONDecodingResponseBody, err)
-		return constants.ErrJSONDecodingResponseBody
+		// Handle Response
+		defer res.Body.Close()
+		response := apiBulkPurgeResponse{}
+		if err := json.NewDecoder(res.Body).Decode(&response); err != nil {
+			log.Errorf("%s: %s", constants.ErrJSONDecodingResponseBody, err)
+			return constants.ErrJSONDecodingResponseBody
+		}
+
+		if len(response.ErrorMap) > 0 {
+			errorMaps = append(errorMaps, response.ErrorMap)
+		}
 	}
 
 	// Check for any errors
-	if len(response.ErrorMap) > 0 {
-		return fmt.Errorf("Purge Node Errors: %+v", response.ErrorMap)
+	if len(errorMaps) > 0 {
+		return fmt.Errorf("Purge Node Errors: %+v", errorMaps)
 	}
 
 	return nil
