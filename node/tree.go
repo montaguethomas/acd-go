@@ -1,10 +1,8 @@
 package node
 
 import (
-	"encoding/json"
 	"fmt"
 	"net/http"
-	"net/url"
 	"strings"
 	"sync"
 	"time"
@@ -37,14 +35,6 @@ type (
 		Do(*http.Request) (*http.Response, error)
 		CheckResponse(*http.Response) error
 		GetNodeTree() *Tree
-	}
-
-	// Response Body for listing nodes
-	nodeList struct {
-		ETagResponse string  `json:"eTagResponse"`
-		Count        uint64  `json:"count,omitempty"`
-		NextToken    string  `json:"nextToken,omitempty"`
-		Nodes        []*Node `json:"data,omitempty"`
 	}
 )
 
@@ -235,112 +225,4 @@ func (nt *Tree) buildNodeTree() {
 			}
 		}
 	}
-}
-
-func (nt *Tree) loadOrFetch() error {
-	log.Debug("node.Tree loadOrFetch starting.")
-	defer log.Debug("node.Tree loadOrFetch completed.")
-
-	var err error
-	if err = nt.loadCache(); err != nil {
-		log.Debug(err)
-		if err = nt.fetchFresh(); err != nil {
-			return err
-		}
-	}
-
-	if err = nt.Sync(); err != nil {
-		switch err {
-		case constants.ErrMustFetchFresh:
-			if err = nt.fetchFresh(); err != nil {
-				return err
-			}
-			return nt.Sync()
-		default:
-			return err
-		}
-	}
-
-	return nil
-}
-
-func (nt *Tree) fetchFresh() error {
-	log.Debug("node.Tree fetchFresh starting.")
-	defer log.Debug("node.Tree fetchFresh completed.")
-
-	// grab the list of all of the nodes from the server.
-	var nextToken string
-	var nodes []*Node
-	for {
-		nl := nodeList{
-			Nodes: make([]*Node, 0, 200),
-		}
-		urlStr := nt.client.GetMetadataURL("nodes")
-		u, err := url.Parse(urlStr)
-		if err != nil {
-			log.Errorf("%s: %s", constants.ErrParsingURL, urlStr)
-			return constants.ErrParsingURL
-		}
-
-		v := url.Values{}
-		v.Set("limit", "200")
-		if nextToken != "" {
-			v.Set("startToken", nextToken)
-		}
-		u.RawQuery = v.Encode()
-
-		req, err := http.NewRequest("GET", u.String(), nil)
-		if err != nil {
-			log.Errorf("%s: %s", constants.ErrCreatingHTTPRequest, err)
-			return constants.ErrCreatingHTTPRequest
-		}
-		req.Header.Set("Content-Type", "application/json")
-		res, err := nt.client.Do(req)
-		if err != nil {
-			log.Errorf("%s: %s", constants.ErrDoingHTTPRequest, err)
-			return constants.ErrDoingHTTPRequest
-		}
-
-		defer res.Body.Close()
-		if err := json.NewDecoder(res.Body).Decode(&nl); err != nil {
-			log.Errorf("%s: %s", constants.ErrJSONDecodingResponseBody, err)
-			return constants.ErrJSONDecodingResponseBody
-		}
-
-		nextToken = nl.NextToken
-		nodes = append(nodes, nl.Nodes...)
-
-		if nextToken == "" {
-			break
-		}
-	}
-
-	nodeIdMap := make(map[string]*Node, len(nodes))
-	for _, node := range nodes {
-		if !node.IsAvailable() {
-			continue
-		}
-		nodeIdMap[node.Id] = node
-	}
-
-	for _, node := range nodeIdMap {
-		if node.Name == "" && node.IsDir() && len(node.Parents) == 0 {
-			nt.Lock()
-			nt.Node = node
-			nt.Unlock()
-		}
-
-		for _, parentId := range node.Parents {
-			if pn, found := nodeIdMap[parentId]; found {
-				pn.Nodes[strings.ToLower(node.Name)] = node
-			}
-		}
-	}
-
-	nt.Lock()
-	nt.Checkpoint = ""
-	nt.LastUpdated = time.Now().UTC()
-	nt.nodeIdMap = nodeIdMap
-	nt.Unlock()
-	return nil
 }

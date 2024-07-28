@@ -22,16 +22,20 @@ type Config struct {
 	// run. It is gob-encoded node.Node.
 	CacheFile string `json:"cacheFile"`
 
-	// SyncChunkSize is the number of nodes to be returned within each Changes object in the response stream.
+	// PurgeTrashInterval is how often to purge trash
+	PurgeTrashInterval string `json:"purgeTrashInterval"`
+
+	// SyncChunkSize is the number of nodes to be returned within each Changes
+	// object in the response stream.
 	SyncChunkSize int `json:"syncChunkSize"`
 
 	// SyncInterval is how often to sync the Node Tree cache
-	SyncInterval time.Duration `json:"syncInterval"`
+	SyncInterval string `json:"syncInterval"`
 
 	// Timeout configures the HTTP Client with a timeout after which the client
-	// will cancel the request and return. A timeout of 0 (the default) means
-	// no timeout. See http://godoc.org/net/http#Client for more information.
-	Timeout time.Duration `json:"timeout"`
+	// will cancel the request and return. A timeout of 0 means no timeout.
+	// See http://godoc.org/net/http#Client for more information.
+	Timeout string `json:"timeout"`
 
 	// UserAgent is the value to use for the user agent header on all http requests
 	UserAgent string `json:"userAgent"`
@@ -42,10 +46,11 @@ type Client struct {
 	// nodeTree is the tree of nodes as stored on the drive.
 	nodeTree *node.Tree
 
-	config     *Config
-	httpClient *http.Client
-	cacheFile  string
-	endpoints  EndpointResponse
+	config         *Config
+	httpClient     *http.Client
+	cacheFile      string
+	endpoints      EndpointResponse
+	purgeTrashDone chan struct{}
 }
 
 type EndpointResponse struct {
@@ -68,24 +73,67 @@ func New(config *Config) (*Client, error) {
 	if config.SyncChunkSize < 1 {
 		config.SyncChunkSize = 25
 	}
-	if config.SyncInterval < time.Second {
-		config.SyncInterval = 30 * time.Second
+	if config.SyncInterval == "" {
+		config.SyncInterval = "30s"
+	}
+	if config.Timeout == "" {
+		config.Timeout = "0"
+	}
+
+	// Create client
+	timeout, err := time.ParseDuration(config.Timeout)
+	if err != nil {
+		return nil, err
 	}
 	c := &Client{
 		config:    config,
 		cacheFile: config.CacheFile,
 		httpClient: &http.Client{
-			Timeout: config.Timeout,
+			Timeout: timeout,
 		},
 	}
+
+	// Initialize client
 	if err := c.setEndpoints(); err != nil {
 		return nil, err
 	}
-	nt, err := node.NewTree(c, c.cacheFile, config.SyncChunkSize, config.SyncInterval)
+
+	// Setup background trash purging
+	if config.PurgeTrashInterval != "" {
+		purgeTrashInterval, err := time.ParseDuration(config.PurgeTrashInterval)
+		if err != nil {
+			return nil, err
+		}
+		ticker := time.NewTicker(purgeTrashInterval)
+		c.purgeTrashDone = make(chan struct{}, 1)
+		go func() {
+			for {
+				select {
+				case <-c.purgeTrashDone:
+					ticker.Stop()
+					return
+				case <-ticker.C:
+					log.Debug("Background purge trash starting.")
+					if err := c.PurgeTrash(); err != nil {
+						log.Errorf("Background purge trash error: %s", err)
+					}
+					log.Debug("Background purge trash completed.")
+				}
+			}
+		}()
+	}
+
+	// Build NodeTree
+	syncInterval, err := time.ParseDuration(config.SyncInterval)
+	if err != nil {
+		return nil, err
+	}
+	nt, err := node.NewTree(c, c.cacheFile, config.SyncChunkSize, syncInterval)
 	if err != nil {
 		return nil, err
 	}
 	c.nodeTree = nt
+
 	return c, nil
 }
 
