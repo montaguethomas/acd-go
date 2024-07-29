@@ -30,50 +30,50 @@ type (
 		Doc struct {
 			Billable struct {
 				Bytes uint64 `json:"bytes"`
-				Count uint32 `json:"count"`
+				Count uint64 `json:"count"`
 			} `json:"billable"`
 			Total struct {
 				Bytes uint64 `json:"bytes"`
-				Count uint32 `json:"count"`
+				Count uint64 `json:"count"`
 			} `json:"total"`
 		} `json:"doc"`
 
 		Other struct {
 			Billable struct {
 				Bytes uint64 `json:"bytes"`
-				Count uint32 `json:"count"`
+				Count uint64 `json:"count"`
 			} `json:"billable"`
 			Total struct {
 				Bytes uint64 `json:"bytes"`
-				Count uint32 `json:"count"`
+				Count uint64 `json:"count"`
 			} `json:"total"`
 		} `json:"other"`
 
 		Photo struct {
 			Billable struct {
 				Bytes uint64 `json:"bytes"`
-				Count uint32 `json:"count"`
+				Count uint64 `json:"count"`
 			} `json:"billable"`
 			Total struct {
 				Bytes uint64 `json:"bytes"`
-				Count uint32 `json:"count"`
+				Count uint64 `json:"count"`
 			} `json:"total"`
 		} `json:"photo"`
 
 		Video struct {
 			Billable struct {
 				Bytes uint64 `json:"bytes"`
-				Count uint32 `json:"count"`
+				Count uint64 `json:"count"`
 			} `json:"billable"`
 			Total struct {
 				Bytes uint64 `json:"bytes"`
-				Count uint32 `json:"count"`
+				Count uint64 `json:"count"`
 			} `json:"total"`
 		} `json:"video"`
 	}
 )
 
-func (au *AccountUsage) Billable() (bytes uint64, count uint32) {
+func (au *AccountUsage) Billable() (bytes uint64, count uint64) {
 	bytes += au.Doc.Billable.Bytes
 	bytes += au.Other.Billable.Bytes
 	bytes += au.Photo.Billable.Bytes
@@ -85,7 +85,7 @@ func (au *AccountUsage) Billable() (bytes uint64, count uint32) {
 	return
 }
 
-func (au *AccountUsage) Total() (bytes uint64, count uint32) {
+func (au *AccountUsage) Total() (bytes uint64, count uint64) {
 	bytes += au.Doc.Total.Bytes
 	bytes += au.Other.Total.Bytes
 	bytes += au.Photo.Total.Bytes
