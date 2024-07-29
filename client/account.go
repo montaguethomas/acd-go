@@ -73,6 +73,30 @@ type (
 	}
 )
 
+func (au *AccountUsage) Billable() (bytes uint64, count uint32) {
+	bytes += au.Doc.Billable.Bytes
+	bytes += au.Other.Billable.Bytes
+	bytes += au.Photo.Billable.Bytes
+	bytes += au.Video.Billable.Bytes
+	count += au.Other.Billable.Count
+	count += au.Doc.Billable.Count
+	count += au.Photo.Billable.Count
+	count += au.Video.Billable.Count
+	return
+}
+
+func (au *AccountUsage) Total() (bytes uint64, count uint32) {
+	bytes += au.Doc.Total.Bytes
+	bytes += au.Other.Total.Bytes
+	bytes += au.Photo.Total.Bytes
+	bytes += au.Video.Total.Bytes
+	count += au.Other.Total.Count
+	count += au.Doc.Total.Count
+	count += au.Photo.Total.Count
+	count += au.Video.Total.Count
+	return
+}
+
 // GetAccountInfo returns AccountInfo about the current account.
 func (c *Client) GetAccountInfo() (*AccountInfo, error) {
 	var ai AccountInfo
