@@ -279,9 +279,31 @@ func (n *Node) Unlock() {
 	n.mutex.Unlock()
 }
 
+func (n *Node) Count() uint64 {
+	if !n.IsDir() {
+		return uint64(1)
+	}
+
+	// Sum count of all children
+	var total uint64
+	for _, child := range n.Nodes {
+		total += child.Count()
+	}
+	return total
+}
+
 // Size returns the size of the node.
-func (n *Node) Size() int64 {
-	return int64(n.ContentProperties.Size)
+func (n *Node) Size() uint64 {
+	if !n.IsDir() {
+		return n.ContentProperties.Size
+	}
+
+	// Sum size of all children
+	var total uint64
+	for _, child := range n.Nodes {
+		total += child.Size()
+	}
+	return total
 }
 
 // ModTime returns the last modified time of the node.
