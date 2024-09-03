@@ -106,7 +106,6 @@ func newConfigFile(cacheFile string) string {
 		log.Fatal(err)
 	}
 	config := &acd.Config{
-		Cookies:   map[string]string{},
 		CacheFile: cacheFile,
 	}
 	defer cf.Close()

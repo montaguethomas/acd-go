@@ -14,15 +14,17 @@ import (
 
 // CreateFolder creates the named folder under the node
 func (nt *Tree) CreateFolder(n *Node, name string, labels []string, properties Property) (*Node, error) {
+	n.RLock()
 	cn := &newNode{
 		Name:    name,
 		Kind:    "FOLDER",
 		Labels:  labels,
 		Parents: []string{n.Id},
 		Properties: map[string]Property{
-			constants.CloudDriveWebOwnerName: properties,
+			constants.AMZClientOwnerName: properties,
 		},
 	}
+	n.RUnlock()
 	jsonBytes, err := json.Marshal(cn)
 	if err != nil {
 		log.Errorf("%s: %s", constants.ErrJSONEncoding, err)
@@ -67,7 +69,7 @@ func (nt *Tree) Upload(parent *Node, name string, labels []string, properties Pr
 		Labels:  labels,
 		Parents: []string{parent.Id},
 		Properties: map[string]Property{
-			constants.CloudDriveWebOwnerName: properties,
+			constants.AMZClientOwnerName: properties,
 		},
 	}
 	metadataJSON, err := json.Marshal(metadata)
@@ -82,9 +84,7 @@ func (nt *Tree) Upload(parent *Node, name string, labels []string, properties Pr
 		return nil, err
 	}
 
-	nt.Lock()
-	nt.nodeIdMap[node.Id] = node
-	nt.Unlock()
+	nt.addNodeToNodeIdMap(node)
 	parent.addChild(node)
 	return node, nil
 }
@@ -94,7 +94,7 @@ func (nt *Tree) Patch(n *Node, labels []string, properties Property) error {
 	metadata := &patchNode{
 		Labels: labels,
 		Properties: map[string]Property{
-			constants.CloudDriveWebOwnerName: properties,
+			constants.AMZClientOwnerName: properties,
 		},
 	}
 	metadataJSON, err := json.Marshal(metadata)

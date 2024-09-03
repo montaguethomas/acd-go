@@ -23,7 +23,7 @@ type (
 		cacheFile string
 		chunkSize int
 		client    client
-		mutex     sync.Mutex
+		mutex     sync.RWMutex
 		nodeIdMap map[string]*Node
 		syncDone  chan struct{}
 	}
@@ -89,6 +89,12 @@ func (nt *Tree) Lock() {
 func (nt *Tree) Unlock() {
 	nt.mutex.Unlock()
 }
+func (nt *Tree) RLock() {
+	nt.mutex.RLock()
+}
+func (nt *Tree) RUnlock() {
+	nt.mutex.RUnlock()
+}
 
 // RemoveNode removes this node from the server and from the NodeTree.
 func (nt *Tree) RemoveNode(n *Node) error {
@@ -113,11 +119,17 @@ func (nt *Tree) RemoveNode(n *Node) error {
 
 func (nt *Tree) addNodeToNodeIdMap(n *Node) {
 	nt.Lock()
+	n.RLock()
 	nt.nodeIdMap[n.Id] = n
+	n.RUnlock()
 	nt.Unlock()
 }
 
 func (nt *Tree) removeNodeFromTree(n *Node) {
+	n.RLock()
+	defer n.RUnlock()
+
+	nt.RLock()
 	for _, parentId := range n.Parents {
 		parent, ok := nt.nodeIdMap[parentId]
 		if !ok {
@@ -126,10 +138,9 @@ func (nt *Tree) removeNodeFromTree(n *Node) {
 		}
 		parent.removeChild(n)
 	}
+	nt.RUnlock()
 	nt.Lock()
 	delete(nt.nodeIdMap, n.Id)
-	// need to remove all child nodes of n from nodeIdMap? or will sync handle those updates?
-	// sync changes will include nodes that are deleted and will trigger remove from tree on them.
 	nt.Unlock()
 }
 

@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"net/http"
 	"os"
+	"runtime"
 	"time"
 
 	"github.com/montaguethomas/acd-go/constants"
@@ -11,57 +12,17 @@ import (
 	"github.com/montaguethomas/acd-go/node"
 )
 
-// Config represents the clients configuration.
-type Config struct {
-	// Cookies contains all cookies to pass on all requests made.
-	// These will be used for authentication to the API endpoints.
-	Cookies map[string]string `json:"cookies"`
-
-	// CacheFile represents the file used by the client to cache the NodeTree.
-	// This file is not assumed to be present and will be created on the first
-	// run. It is gob-encoded node.Node.
-	CacheFile string `json:"cacheFile"`
-
-	// PurgeTrashInterval is how often to purge trash
-	PurgeTrashInterval string `json:"purgeTrashInterval"`
-
-	// SyncChunkSize is the number of nodes to be returned within each Changes
-	// object in the response stream.
-	SyncChunkSize int `json:"syncChunkSize"`
-
-	// SyncInterval is how often to sync the Node Tree cache
-	SyncInterval string `json:"syncInterval"`
-
-	// Timeout configures the HTTP Client with a timeout after which the client
-	// will cancel the request and return. A timeout of 0 means no timeout.
-	// See http://godoc.org/net/http#Client for more information.
-	Timeout string `json:"timeout"`
-
-	// UserAgent is the value to use for the user agent header on all http requests
-	UserAgent string `json:"userAgent"`
-}
-
 // Client provides a client for Amazon Cloud Drive.
 type Client struct {
 	// nodeTree is the tree of nodes as stored on the drive.
 	nodeTree *node.Tree
 
-	config         *Config
-	httpClient     *http.Client
-	cacheFile      string
-	endpoints      EndpointResponse
-	purgeTrashDone chan struct{}
-}
-
-type EndpointResponse struct {
-	ContentURL          string `json:"contentUrl"`
-	CountryAtSignup     string `json:"countryAtSignup"`
-	CustomerExists      bool   `json:"customerExists"`
-	DownloadServiceURL  string `json:"downloadServiceUrl"`
-	MetadataURL         string `json:"metadataUrl"`
-	Region              string `json:"region"`
-	RetailURL           string `json:"retailUrl"`
-	ThumbnailServiceURL string `json:"thumbnailServiceUrl"`
+	config           *Config
+	httpClient       *http.Client
+	cacheFile        string
+	endpoints        apiEndpointResponse
+	purgeTrashDone   chan struct{}
+	refreshTokenDone chan struct{}
 }
 
 // New returns a new Amazon Cloud Drive "acd" Client
@@ -69,6 +30,15 @@ func New(config *Config) (*Client, error) {
 	// Validate configs
 	if config.CacheFile == "" {
 		return nil, constants.ErrCacheFileConfigEmpty
+	}
+	if config.AppName == "" {
+		config.AppName = runtime.Version()
+	}
+	if config.AppVersion == "" {
+		config.AppVersion = runtime.Version()
+	}
+	if config.Headers == nil {
+		config.Headers = map[string]string{}
 	}
 	if config.SyncChunkSize < 1 {
 		config.SyncChunkSize = 25
@@ -79,6 +49,9 @@ func New(config *Config) (*Client, error) {
 	if config.Timeout == "" {
 		config.Timeout = "0"
 	}
+	//if config.UserAgent == "" {
+	//	config.UserAgent = "CloudDriveMac/10.4.0.3655d303"
+	//}
 
 	// Create client
 	timeout, err := time.ParseDuration(config.Timeout)
@@ -93,14 +66,39 @@ func New(config *Config) (*Client, error) {
 		},
 	}
 
-	// Initialize client
+	// If a refresh token is set, try to get a new access token and setup background refresh
+	if c.config.RefreshToken != "" {
+		if err := c.RefreshToken(); err != nil {
+			return nil, err
+		}
+		ticker := time.NewTicker(time.Minute * 15)
+		c.refreshTokenDone = make(chan struct{}, 1)
+		go func() {
+			for {
+				select {
+				case <-c.refreshTokenDone:
+					ticker.Stop()
+					return
+				case <-ticker.C:
+					log.Debug("Background refresh token starting.")
+					if err := c.RefreshToken(); err != nil {
+						log.Errorf("Background refresh token error: %s", err)
+					}
+					log.Debug("Background refresh token completed.")
+				}
+			}
+		}()
+	}
+
+	// Load endpoints
 	if err := c.setEndpoints(); err != nil {
 		return nil, err
 	}
 
 	// Setup background trash purging
-	if config.PurgeTrashInterval != "" {
-		purgeTrashInterval, err := time.ParseDuration(config.PurgeTrashInterval)
+	c.config.mutex.RLock()
+	if c.config.PurgeTrashInterval != "" {
+		purgeTrashInterval, err := time.ParseDuration(c.config.PurgeTrashInterval)
 		if err != nil {
 			return nil, err
 		}
@@ -122,6 +120,7 @@ func New(config *Config) (*Client, error) {
 			}
 		}()
 	}
+	c.config.mutex.RUnlock()
 
 	// Build NodeTree
 	syncInterval, err := time.ParseDuration(config.SyncInterval)
@@ -139,20 +138,25 @@ func New(config *Config) (*Client, error) {
 
 // Close finalizes the acd.
 func (c *Client) Close() error {
+	if c.config.PurgeTrashInterval != "" {
+		c.purgeTrashDone <- struct{}{}
+	}
+	if c.config.RefreshToken != "" {
+		c.refreshTokenDone <- struct{}{}
+	}
 	return c.nodeTree.Close()
 }
 
 // Do invokes net/http.Client.Do(). Refer to net/http.Client.Do() for documentation.
 func (c *Client) Do(r *http.Request) (*http.Response, error) {
-	for name, value := range c.config.Cookies {
-		r.AddCookie(&http.Cookie{Name: name, Value: value})
-	}
-	if value, ok := c.config.Cookies["session-id"]; ok {
-		r.Header.Add("x-amzn-sessionid", value)
+	c.config.mutex.RLock()
+	for key, value := range c.config.Headers {
+		r.Header.Set(key, value)
 	}
 	if c.config.UserAgent != "" {
-		r.Header.Add("user-agent", c.config.UserAgent)
+		r.Header.Set("User-Agent", c.config.UserAgent)
 	}
+	c.config.mutex.RUnlock()
 	return c.httpClient.Do(r)
 }
 

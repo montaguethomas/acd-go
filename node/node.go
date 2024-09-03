@@ -115,7 +115,7 @@ type (
 		Nodes Nodes `json:"nodes,omitempty"`
 
 		// Internal
-		mutex sync.Mutex
+		mutex sync.RWMutex
 	}
 
 	// Request Body for creating new nodes (files, folders)
@@ -278,8 +278,17 @@ func (n *Node) Lock() {
 func (n *Node) Unlock() {
 	n.mutex.Unlock()
 }
+func (n *Node) RLock() {
+	n.mutex.RLock()
+}
+func (n *Node) RUnlock() {
+	n.mutex.RUnlock()
+}
 
 func (n *Node) Count() uint64 {
+	n.RLock()
+	defer n.RUnlock()
+
 	if !n.IsDir() {
 		return uint64(1)
 	}
@@ -294,6 +303,9 @@ func (n *Node) Count() uint64 {
 
 // Size returns the size of the node.
 func (n *Node) Size() uint64 {
+	n.RLock()
+	defer n.RUnlock()
+
 	if !n.IsDir() {
 		return n.ContentProperties.Size
 	}
@@ -308,36 +320,52 @@ func (n *Node) Size() uint64 {
 
 // ModTime returns the last modified time of the node.
 func (n *Node) ModTime() time.Time {
+	n.RLock()
+	defer n.RUnlock()
 	return n.ModifiedDate
 }
 
 // IsFile returns whether the node represents a file.
 func (n *Node) IsFile() bool {
+	n.RLock()
+	defer n.RUnlock()
 	return n.Kind == KindFile
 }
 
 // IsDir returns whether the node represents a folder.
 func (n *Node) IsDir() bool {
+	n.RLock()
+	defer n.RUnlock()
 	return n.Kind == KindFolder
 }
 
 // IsAsset returns whether the node represents an asset.
 func (n *Node) IsAsset() bool {
+	n.RLock()
+	defer n.RUnlock()
 	return n.Kind == KindAsset
 }
 
 // IsAvailable returns true if the node is available
 func (n *Node) IsAvailable() bool {
+	n.RLock()
+	defer n.RUnlock()
 	return n.Status == StatusAvailable
 }
 
 func (n *Node) GetOwnerProperties() (Property, bool) {
-	props, ok := n.Properties[constants.CloudDriveWebOwnerName]
+	n.RLock()
+	defer n.RUnlock()
+
+	props, ok := n.Properties[constants.AMZClientOwnerName]
 	return props, ok
 }
 
 func (n *Node) GetOwnerProperty(key string) (string, bool) {
-	props, ok := n.Properties[constants.CloudDriveWebOwnerName]
+	n.RLock()
+	defer n.RUnlock()
+
+	props, ok := n.Properties[constants.AMZClientOwnerName]
 	if !ok {
 		return "", false
 	}
@@ -349,36 +377,43 @@ func (n *Node) GetOwnerProperty(key string) (string, bool) {
 }
 
 func (n *Node) SetOwnerProperties(prop Property) {
+	n.Lock()
+	defer n.Unlock()
+
 	if n.Properties == nil {
 		n.Properties = map[string]*nodeProperty{}
 	}
-	n.Properties[constants.CloudDriveWebOwnerName] = prop.(*nodeProperty)
+	n.Properties[constants.AMZClientOwnerName] = prop.(*nodeProperty)
 }
 
 // addChild add a new child for the node
 func (n *Node) addChild(child *Node) {
-	log.Debugf("adding %s under %s", child.Name, n.Name)
 	n.Lock()
+	defer n.Unlock()
+
+	log.Debugf("adding child node %s under %s", child.Name, n.Name)
 	if n.Nodes == nil {
 		n.Nodes = make(Nodes)
 	}
 	n.Nodes[strings.ToLower(child.Name)] = child
-	n.Unlock()
 }
 
 // removeChild remove a new child for the node
 func (n *Node) removeChild(child *Node) {
-	log.Debugf("removing %s from %s", child.Name, n.Name)
+	n.Lock()
+	defer n.Unlock()
+
+	log.Debugf("removing child node %s from %s", child.Name, n.Name)
 	if n.Nodes != nil {
-		n.Lock()
 		delete(n.Nodes, strings.ToLower(child.Name))
-		n.Unlock()
 	}
 }
 
 func (n *Node) update(newNode *Node) error {
 	// encode the newNode to JSON.
+	newNode.RLock()
 	v, err := json.Marshal(newNode)
+	newNode.RUnlock()
 	if err != nil {
 		log.Errorf("error encoding the node to JSON: %s", err)
 		return constants.ErrJSONEncoding
