@@ -26,6 +26,9 @@ const (
 
 	// DebugLevel represents a debug message.
 	DebugLevel
+
+	// DebugLevel represents a trace message.
+	TraceLevel
 )
 
 var (
@@ -38,17 +41,20 @@ var (
 		ErrorLevel:      "[ERROR] ",
 		InfoLevel:       "[INFO] ",
 		DebugLevel:      "[DEBUG] ",
+		TraceLevel:      "[TRACE] ",
 	}
 )
 
 // Levels returns a string of all possible levels
 func Levels() string {
-	return fmt.Sprintf("%d:%s, %d:%s, %d:%s, %d:%s, %d:%s",
+	return fmt.Sprintf("%d:%s, %d:%s, %d:%s, %d:%s, %d:%s, %d:%s",
 		DisableLogLevel, DisableLogLevel,
 		FatalLevel, FatalLevel,
 		ErrorLevel, ErrorLevel,
 		InfoLevel, InfoLevel,
-		DebugLevel, DebugLevel)
+		DebugLevel, DebugLevel,
+		TraceLevel, TraceLevel,
+	)
 }
 
 // SetLevel sets the log level to l.
@@ -103,6 +109,9 @@ func Infof(format string, v ...interface{}) { Printf(InfoLevel, format, v...) }
 // Debugf wraps Printf
 func Debugf(format string, v ...interface{}) { Printf(DebugLevel, format, v...) }
 
+// Tracef wraps Printf
+func Tracef(format string, v ...interface{}) { Printf(TraceLevel, format, v...) }
+
 // Fatal wraps Print
 func Fatal(v ...interface{}) { Print(FatalLevel, v...) }
 
@@ -114,3 +123,6 @@ func Info(v ...interface{}) { Print(InfoLevel, v...) }
 
 // Debug wraps Print
 func Debug(v ...interface{}) { Print(DebugLevel, v...) }
+
+// Trace wraps Print
+func Trace(v ...interface{}) { Print(TraceLevel, v...) }

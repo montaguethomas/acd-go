@@ -391,7 +391,7 @@ func (n *Node) addChild(child *Node) {
 	n.Lock()
 	defer n.Unlock()
 
-	log.Debugf("adding child node %s under %s", child.Name, n.Name)
+	log.Tracef("adding child node %s under %s", child.Name, n.Name)
 	if n.Nodes == nil {
 		n.Nodes = make(Nodes)
 	}
@@ -403,7 +403,7 @@ func (n *Node) removeChild(child *Node) {
 	n.Lock()
 	defer n.Unlock()
 
-	log.Debugf("removing child node %s from %s", child.Name, n.Name)
+	log.Tracef("removing child node %s from %s", child.Name, n.Name)
 	if n.Nodes != nil {
 		delete(n.Nodes, strings.ToLower(child.Name))
 	}

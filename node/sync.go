@@ -143,7 +143,7 @@ func (nt *Tree) updateNodes(crNodes []*Node) error {
 
 		// Remove deleted nodes
 		if !crNode.IsAvailable() {
-			log.Debugf("node Id %s name %s has been deleted", crNode.Id, crNode.Name)
+			log.Tracef("node Id %s name %s has been deleted", crNode.Id, crNode.Name)
 			nt.removeNodeFromTree(crNode)
 			continue
 		}
@@ -168,7 +168,7 @@ func (nt *Tree) updateNodes(crNodes []*Node) error {
 			for _, parentId := range node.Parents {
 				parent, ok := nt.nodeIdMap[parentId]
 				if !ok {
-					log.Debugf("parent Id %s not found, nothing to remove from", parentId)
+					log.Tracef("parent Id %s not found, nothing to remove from", parentId)
 					continue
 				}
 				parent.removeChild(node)
@@ -179,7 +179,7 @@ func (nt *Tree) updateNodes(crNodes []*Node) error {
 		for _, parentId := range crNode.Parents {
 			parent, ok := nt.nodeIdMap[parentId]
 			if !ok {
-				log.Debugf("parent Id %s not found, creating placeholder", parentId)
+				log.Tracef("parent Id %s not found, creating placeholder", parentId)
 				parent = &Node{Id: parentId}
 				nt.nodeIdMap[parentId] = parent
 			}

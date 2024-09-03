@@ -133,7 +133,7 @@ func (nt *Tree) removeNodeFromTree(n *Node) {
 	for _, parentId := range n.Parents {
 		parent, ok := nt.nodeIdMap[parentId]
 		if !ok {
-			log.Debugf("node.Tree removeNodeFromTree parent Id %s not found", parentId)
+			log.Tracef("node.Tree removeNodeFromTree parent Id %s not found", parentId)
 			continue
 		}
 		parent.removeChild(n)

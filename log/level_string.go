@@ -4,9 +4,9 @@ package log
 
 import "fmt"
 
-const _Level_name = "DisableLogLevelFatalLevelErrorLevelInfoLevelDebugLevel"
+const _Level_name = "DisableLogLevelFatalLevelErrorLevelInfoLevelDebugLevelTraceLevel"
 
-var _Level_index = [...]uint8{0, 15, 25, 35, 44, 54}
+var _Level_index = [...]uint8{0, 15, 25, 35, 44, 54, 64}
 
 func (i Level) String() string {
 	if i >= Level(len(_Level_index)-1) {
